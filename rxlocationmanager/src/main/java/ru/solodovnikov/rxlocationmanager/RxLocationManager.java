@@ -40,10 +40,9 @@ public class RxLocationManager {
      * @param provider    provider name
      * @param howOldCanBe optional. How old a location can be
      * @return observable that emit last known location. May emit null.
-     *
      * @throws ElderLocationException if {@code howOldCanBe} is not null and location time is not valid
      */
-    public Observable<Location> getLastLocation(final @NonNull String provider, final @Nullable Time howOldCanBe) {
+    public Observable<Location> getLastLocation(final @NonNull String provider, final @Nullable LocationTime howOldCanBe) {
         return Observable.create(new Observable.OnSubscribe<Location>() {
             @Override
             public void call(Subscriber<? super Location> subscriber) {
@@ -91,11 +90,10 @@ public class RxLocationManager {
      * @param provider provider name
      * @param timeOut  optional request timeout
      * @return observable that emit current location
-     *
-     * @throws TimeoutException in case of timeOut if timeOut object is not null
+     * @throws TimeoutException          in case of timeOut if timeOut object is not null
      * @throws ProviderDisabledException if provider is disabled
      */
-    public Observable<Location> requestLocation(final @NonNull String provider, final @Nullable Time timeOut) {
+    public Observable<Location> requestLocation(final @NonNull String provider, final @Nullable LocationTime timeOut) {
         return requestLocation(provider, timeOut, true);
     }
 
@@ -104,14 +102,13 @@ public class RxLocationManager {
      *
      * @param provider provider name
      * @return observable that emit current location
-     *
      * @throws ProviderDisabledException if provider is disabled
      */
     public Observable<Location> requestLocation(@NonNull String provider) {
         return requestLocation(provider, null);
     }
 
-    Observable<Location> requestLocation(final @NonNull String provider, final @Nullable Time timeOut, boolean throwExceptionIfDisabled) {
+    Observable<Location> requestLocation(final @NonNull String provider, final @Nullable LocationTime timeOut, boolean throwExceptionIfDisabled) {
 
         final RxLocationListener locationListener = new RxLocationListener(locationManager, provider, throwExceptionIfDisabled);
 
@@ -134,7 +131,7 @@ public class RxLocationManager {
         };
     }
 
-    private boolean isLocationNotOld(Location location, Time howOldCanBe) {
+    private boolean isLocationNotOld(Location location, LocationTime howOldCanBe) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
             return isLocationNotOld17(location, howOldCanBe);
         } else {
@@ -143,12 +140,12 @@ public class RxLocationManager {
     }
 
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR1)
-    private boolean isLocationNotOld17(Location location, Time howOldCanBe) {
+    private boolean isLocationNotOld17(Location location, LocationTime howOldCanBe) {
         return SystemClock.elapsedRealtimeNanos() - location
                 .getElapsedRealtimeNanos() < howOldCanBe.getTimeUnit().toNanos(howOldCanBe.getValue());
     }
 
-    private boolean isLocationNotOldDefault(Location location, Time howOldCanBe) {
+    private boolean isLocationNotOldDefault(Location location, LocationTime howOldCanBe) {
         return System.currentTimeMillis() - location.getTime() < howOldCanBe.getTimeUnit().toMillis(howOldCanBe.getValue());
     }
 

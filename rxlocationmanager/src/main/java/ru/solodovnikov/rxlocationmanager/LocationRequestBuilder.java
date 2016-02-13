@@ -38,7 +38,7 @@ public class LocationRequestBuilder {
      * @param timeOut     optional request timeout
      * @param transformer optional extra transformer
      */
-    public LocationRequestBuilder addRequestLocation(@NonNull String provider, @Nullable Time timeOut, @Nullable Observable.Transformer<Location, Location> transformer) {
+    public LocationRequestBuilder addRequestLocation(@NonNull String provider, @Nullable LocationTime timeOut, @Nullable Observable.Transformer<Location, Location> transformer) {
 
         final Observable<Location> observable = rxLocationManager.requestLocation(provider, timeOut, false)
                 .onErrorResumeNext(new Func1<Throwable, Observable<? extends Location>>() {
@@ -56,7 +56,7 @@ public class LocationRequestBuilder {
         return this;
     }
 
-    public LocationRequestBuilder addRequestLocation(@NonNull String provider, @Nullable Time timeOut) {
+    public LocationRequestBuilder addRequestLocation(@NonNull String provider, @Nullable LocationTime timeOut) {
         return addRequestLocation(provider, timeOut, null);
     }
 
@@ -77,7 +77,7 @@ public class LocationRequestBuilder {
      * @param howOldCanBe optional. How old a location can be
      * @param transformer optional extra transformer
      */
-    public LocationRequestBuilder addLastLocation(@NonNull String provider, @Nullable Time howOldCanBe, final boolean isNullValid, @Nullable Observable.Transformer<Location, Location> transformer) {
+    public LocationRequestBuilder addLastLocation(@NonNull String provider, @Nullable LocationTime howOldCanBe, final boolean isNullValid, @Nullable Observable.Transformer<Location, Location> transformer) {
 
         Observable<Location> observable = rxLocationManager.getLastLocation(provider, howOldCanBe)
                 .filter(new Func1<Location, Boolean>() {
@@ -107,7 +107,7 @@ public class LocationRequestBuilder {
         return this;
     }
 
-    public LocationRequestBuilder addLastLocation(@NonNull String provider, @Nullable Time howOldCanBe, final boolean isNullValid) {
+    public LocationRequestBuilder addLastLocation(@NonNull String provider, @Nullable LocationTime howOldCanBe, final boolean isNullValid) {
         return addLastLocation(provider, howOldCanBe, isNullValid, null);
     }
 

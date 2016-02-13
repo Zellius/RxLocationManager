@@ -41,6 +41,7 @@ public class RxLocationManagerTest {
 
     /**
      * Test that all fine
+     *
      * @throws SecurityException
      */
     @Test
@@ -60,6 +61,7 @@ public class RxLocationManagerTest {
 
     /**
      * Test that getLastLocation throw ElderLocationException if howOldCanBe is provided
+     *
      * @throws SecurityException
      */
     @Test
@@ -72,7 +74,7 @@ public class RxLocationManagerTest {
         final RxLocationManager rxLocationManager = new RxLocationManager(locationManager);
 
         final TestSubscriber<Location> subscriber = new TestSubscriber<>();
-        rxLocationManager.getLastLocation(provider, new Time(30, TimeUnit.MINUTES)).subscribe(subscriber);
+        rxLocationManager.getLastLocation(provider, new LocationTime(30, TimeUnit.MINUTES)).subscribe(subscriber);
         subscriber.awaitTerminalEvent();
         subscriber.assertError(ElderLocationException.class);
     }
@@ -132,19 +134,19 @@ public class RxLocationManagerTest {
         final RxLocationManager rxLocationManager = new RxLocationManager(locationManager);
 
         final TestSubscriber<Location> subscriber = new TestSubscriber<>();
-        rxLocationManager.requestLocation(provider, new Time(5, TimeUnit.SECONDS)).subscribe(subscriber);
+        rxLocationManager.requestLocation(provider, new LocationTime(5, TimeUnit.SECONDS)).subscribe(subscriber);
         subscriber.awaitTerminalEvent();
         subscriber.assertError(TimeoutException.class);
     }
 
     @Test
-    public void builder_Success() throws SecurityException{
+    public void builder_Success() throws SecurityException {
         final Location location1 = buildFakeLocation(provider);
 
         final LocationRequestBuilder locationRequestBuilder = new LocationRequestBuilder(new RxLocationManager(locationManager));
 
         final Observable<Location> createdObservable = locationRequestBuilder.addLastLocation(provider, false)
-                .addRequestLocation(provider, new Time(5, TimeUnit.SECONDS))
+                .addRequestLocation(provider, new LocationTime(5, TimeUnit.SECONDS))
                 .setDefaultLocation(location1)
                 .create();
 
@@ -162,17 +164,18 @@ public class RxLocationManagerTest {
 
     /**
      * Return null if no default location is setted and no value was emitted
+     *
      * @throws SecurityException
      */
     @Test
-    public void builder_Success2() throws SecurityException{
+    public void builder_Success2() throws SecurityException {
         final Location location1 = buildFakeLocation(provider);
         location1.setTime(System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1));
 
         final LocationRequestBuilder locationRequestBuilder = new LocationRequestBuilder(new RxLocationManager(locationManager));
 
-        final Observable<Location> createdObservable = locationRequestBuilder.addLastLocation(provider, new Time(10, TimeUnit.MINUTES), false)
-                .addRequestLocation(provider, new Time(5, TimeUnit.SECONDS))
+        final Observable<Location> createdObservable = locationRequestBuilder.addLastLocation(provider, new LocationTime(10, TimeUnit.MINUTES), false)
+                .addRequestLocation(provider, new LocationTime(5, TimeUnit.SECONDS))
                 .create();
 
         //set provider enabled
@@ -187,7 +190,7 @@ public class RxLocationManagerTest {
     }
 
     @Test
-    public void builder_Success3() throws SecurityException{
+    public void builder_Success3() throws SecurityException {
         final Location location1 = buildFakeLocation(provider);
 
         final LocationRequestBuilder locationRequestBuilder = new LocationRequestBuilder(new RxLocationManager(locationManager));
