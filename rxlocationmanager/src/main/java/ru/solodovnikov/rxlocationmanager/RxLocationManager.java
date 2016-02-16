@@ -36,11 +36,12 @@ public class RxLocationManager {
 
     /**
      * Get last location from specific provider
+     * Observable will emit ElderLocationException if {@code howOldCanBe} is not null and location time is not valid.
      *
      * @param provider    provider name
      * @param howOldCanBe optional. How old a location can be
      * @return observable that emit last known location. May emit null.
-     * @throws ElderLocationException if {@code howOldCanBe} is not null and location time is not valid
+     * @see ElderLocationException
      */
     public Observable<Location> getLastLocation(final @NonNull String provider, final @Nullable LocationTime howOldCanBe) {
         return Observable.create(new Observable.OnSubscribe<Location>() {
@@ -85,13 +86,15 @@ public class RxLocationManager {
     }
 
     /**
-     * Try to get current location by specific provider
+     * Try to get current location by specific provider.
+     * Observable will emit TimeoutException in case of timeOut if timeOut object is not null.
+     * Observable will emit ProviderDisabledException if provider is disabled
      *
      * @param provider provider name
      * @param timeOut  optional request timeout
      * @return observable that emit current location
-     * @throws TimeoutException          in case of timeOut if timeOut object is not null
-     * @throws ProviderDisabledException if provider is disabled
+     * @see TimeoutException
+     * @see ProviderDisabledException
      */
     public Observable<Location> requestLocation(final @NonNull String provider, final @Nullable LocationTime timeOut) {
         return requestLocation(provider, timeOut, true);
@@ -99,10 +102,11 @@ public class RxLocationManager {
 
     /**
      * Try to get current location by specific provider
+     * Observable will emit ProviderDisabledException if provider is disabled
      *
      * @param provider provider name
      * @return observable that emit current location
-     * @throws ProviderDisabledException if provider is disabled
+     * @see  ProviderDisabledException
      */
     public Observable<Location> requestLocation(@NonNull String provider) {
         return requestLocation(provider, null);

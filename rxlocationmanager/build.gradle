@@ -1,4 +1,5 @@
 apply plugin: 'com.android.library'
+apply plugin: 'com.novoda.bintray-release'
 
 android {
     compileSdkVersion 23
@@ -8,7 +9,7 @@ android {
         minSdkVersion 14
         targetSdkVersion 23
         versionCode 1
-        versionName "1.0"
+        versionName "0.1.0"
     }
     buildTypes {
         release {
@@ -32,4 +33,13 @@ dependencies {
     compile 'com.android.support:support-annotations:23.1.1'
     testCompile 'org.robolectric:robolectric:3.0'
     testCompile 'org.mockito:mockito-core:1.10.19'
+}
+
+publish {
+    groupId = 'com.github.zellius'
+    artifactId = 'rxlocationmanager'
+    publishVersion = '0.1.0'
+    desc = 'Android library that helps to get location using standart LocationManager and RxJava'
+    licences = ['MIT']
+    website = 'https://github.com/Zellius/RxLocationManager'
 }

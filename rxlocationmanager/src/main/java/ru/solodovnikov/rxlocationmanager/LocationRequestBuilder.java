@@ -37,6 +37,7 @@ public class LocationRequestBuilder {
      * @param provider    provider name
      * @param timeOut     optional request timeout
      * @param transformer optional extra transformer
+     * @return same builder
      */
     public LocationRequestBuilder addRequestLocation(@NonNull String provider, @Nullable LocationTime timeOut, @Nullable Observable.Transformer<Location, Location> transformer) {
 
@@ -56,6 +57,13 @@ public class LocationRequestBuilder {
         return this;
     }
 
+    /**
+     * Try to get current location by specific provider
+     *
+     * @param provider provider name
+     * @param timeOut  optional request timeout
+     * @return same builder
+     */
     public LocationRequestBuilder addRequestLocation(@NonNull String provider, @Nullable LocationTime timeOut) {
         return addRequestLocation(provider, timeOut, null);
     }
@@ -64,6 +72,7 @@ public class LocationRequestBuilder {
      * Try to get current location by specific provider
      *
      * @param provider provider name
+     * @return same builder
      */
     public LocationRequestBuilder addRequestLocation(@NonNull String provider) {
         return addRequestLocation(provider, null);
@@ -76,6 +85,7 @@ public class LocationRequestBuilder {
      * @param provider    provider name
      * @param howOldCanBe optional. How old a location can be
      * @param transformer optional extra transformer
+     * @return same builder
      */
     public LocationRequestBuilder addLastLocation(@NonNull String provider, @Nullable LocationTime howOldCanBe, final boolean isNullValid, @Nullable Observable.Transformer<Location, Location> transformer) {
 
@@ -107,6 +117,14 @@ public class LocationRequestBuilder {
         return this;
     }
 
+    /**
+     * Get last location from specific provider
+     *
+     * @param provider    provider name
+     * @param howOldCanBe optional. How old a location can be
+     * @param isNullValid emit null value?
+     * @return same builder
+     */
     public LocationRequestBuilder addLastLocation(@NonNull String provider, @Nullable LocationTime howOldCanBe, final boolean isNullValid) {
         return addLastLocation(provider, howOldCanBe, isNullValid, null);
     }
@@ -115,7 +133,8 @@ public class LocationRequestBuilder {
      * Get last location from specific provider
      *
      * @param provider    provider name
-     * @param isNullValid is null can be emitted
+     * @param isNullValid emit null value?
+     * @return same builder
      */
     public LocationRequestBuilder addLastLocation(@NonNull String provider, boolean isNullValid) {
         return addLastLocation(provider, null, isNullValid);
@@ -125,7 +144,7 @@ public class LocationRequestBuilder {
      * Set location that will be returned in case of empty observable
      *
      * @param defaultLocation default location
-     * @return
+     * @return same builder
      */
     public LocationRequestBuilder setDefaultLocation(@Nullable Location defaultLocation) {
         this.defaultLocation = defaultLocation;
@@ -136,8 +155,8 @@ public class LocationRequestBuilder {
     /**
      * If returnDefaultLocationOnError is true, result observable will emit default location if any exception occur
      *
-     * @param returnDefaultLocationOnError
-     * @return
+     * @param returnDefaultLocationOnError emit default location if any exception occur?
+     * @return same builder
      */
     public LocationRequestBuilder setReturnDefaultLocationOnError(boolean returnDefaultLocationOnError) {
         this.returnDefaultLocationOnError = returnDefaultLocationOnError;
