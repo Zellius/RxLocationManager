@@ -2,6 +2,21 @@ RxLocationManager
 -----------------
 Android library that helps to get location using standart LocationManager and RxJava. It does not use the Google Play Services and it's easier to use.
 
+Download
+-----------------
+```xml
+<dependency>
+  <groupId>com.github.zellius</groupId>
+  <artifactId>rxlocationmanager</artifactId>
+  <version>0.1.0</version>
+  <type>pom</type>
+</dependency>
+```
+######Gradle
+```gradle
+compile 'com.github.zellius:rxlocationmanager:0.1.0'
+```
+
 Feautures
 -----------------
 
