@@ -1,5 +1,7 @@
 package ru.solodovnikov.rxlocationmanager.kotlin
 
-/**
- * Created by Zellius on 17.02.2016.
- */
+import android.location.Location
+
+class ProviderDisabledException(val provider: String) : Throwable("The $provider provider is disabled")
+
+class ElderLocationException(val location: Location) : Throwable("The location is too old")
