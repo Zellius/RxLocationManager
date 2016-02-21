@@ -14,7 +14,7 @@ Download
 ```
 ######Gradle
 ```gradle
-compile 'com.github.zellius:rxlocationmanager:0.1.0'
+compile 'com.github.zellius:rxlocationmanager:0.1.1'
 ```
 
 Feautures
