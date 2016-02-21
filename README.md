@@ -8,7 +8,7 @@ Download
 <dependency>
   <groupId>com.github.zellius</groupId>
   <artifactId>rxlocationmanager</artifactId>
-  <version>0.1.0</version>
+  <version>0.1.1</version>
   <type>pom</type>
 </dependency>
 ```
