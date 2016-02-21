@@ -21,11 +21,11 @@ class RxLocationManager internal constructor(private val locationManager: Locati
 
     /**
      * Get last location from specific provider
-     * Observable will emit ElderLocationException if {@code howOldCanBe} is not null and location time is not valid.
+     * Observable will emit [ElderLocationException] if [howOldCanBe] is not null and location time is not valid.
      *
-     * @param provider    provider name
-     * @param howOldCanBe optional. How old a location can be
-     * @return observable that emit last known location. May emit null.
+     * @param provider provider name
+     * @param howOldCanBe how old a location can be
+     * @return observable that emit last known location. May emit null
      * @see ElderLocationException
      */
     fun getLastLocation(provider: String, howOldCanBe: LocationTime? = null) =
@@ -48,13 +48,13 @@ class RxLocationManager internal constructor(private val locationManager: Locati
 
     /**
      * Try to get current location by specific provider.
-     * Observable will emit TimeoutException in case of timeOut if timeOut object is not null.
-     * Observable will emit ProviderDisabledException if provider is disabled
+     * Observable will emit [TimeoutException] in case of timeOut if [timeOut] object is not null.
+     * Observable will emit [ProviderDisabledException] if provider is disabled
      *
      * @param provider provider name
      * @param timeOut  optional request timeout
      * @return observable that emit current location
-     * @see TimeoutExceptio
+     * @see TimeoutException
      * @see ProviderDisabledException
      */
     fun requestLocation(provider: String, timeOut: LocationTime? = null) = requestLocation(provider, timeOut, true)
@@ -159,11 +159,12 @@ class LocationRequestBuilder internal constructor(private val rxLocationManager:
     constructor(context: Context) : this(RxLocationManager(context))
 
     /**
-     * Try to get current location by specific provider
+     * Try to get current location by specific [provider]
      *
      * @param provider    provider name
      * @param timeOut     optional request timeout
      * @param transformer optional extra transformer
+     *
      * @return same builder
      */
     fun addRequestLocation(provider: String, timeOut: LocationTime? = null, transformer: Observable.Transformer<Location, Location>? = null): LocationRequestBuilder {
@@ -176,7 +177,7 @@ class LocationRequestBuilder internal constructor(private val rxLocationManager:
     }
 
     /**
-     * Get last location from specific provider
+     * Get last location from specific [provider]
      *
      * @param provider    provider name
      * @param howOldCanBe optional. How old a location can be
@@ -213,7 +214,7 @@ class LocationRequestBuilder internal constructor(private val rxLocationManager:
     }
 
     /**
-     * If returnDefaultLocationOnError is true, result observable will emit default location if any exception occur
+     * If [returnDefaultLocationOnError] is true, result observable will emit default location if any exception occur
      *
      * @param returnDefaultLocationOnError emit default location if any exception occur?
      * @return same builder

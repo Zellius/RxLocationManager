@@ -34,7 +34,6 @@ class RxLocationManagerTest {
 
     /**
      * Test that all fine
-     *
      */
     @Test
     fun getLastLocation_Success() {
