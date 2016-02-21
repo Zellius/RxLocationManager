@@ -16,6 +16,7 @@ import java.util.concurrent.TimeoutException;
 import ru.solodovnikov.rxlocationmanager.error.ElderLocationException;
 import ru.solodovnikov.rxlocationmanager.error.ProviderDisabledException;
 import rx.Observable;
+import rx.Scheduler;
 import rx.Subscriber;
 import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
@@ -25,13 +26,16 @@ import rx.functions.Func1;
 public class RxLocationManager {
 
     private final LocationManager locationManager;
+    private final Scheduler scheduler;
 
     public RxLocationManager(Context context) {
         this.locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
+        this.scheduler = AndroidSchedulers.mainThread();
     }
 
-    RxLocationManager(LocationManager locationManager) {
+    RxLocationManager(LocationManager locationManager, Scheduler scheduler) {
         this.locationManager = locationManager;
+        this.scheduler = scheduler;
     }
 
     /**
@@ -130,7 +134,7 @@ public class RxLocationManager {
         return new Observable.Transformer<Location, Location>() {
             @Override
             public Observable<Location> call(Observable<Location> locationObservable) {
-                return locationObservable.subscribeOn(AndroidSchedulers.mainThread());
+                return locationObservable.subscribeOn(scheduler).observeOn(scheduler);
             }
         };
     }

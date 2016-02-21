@@ -12,6 +12,7 @@ import java.util.concurrent.TimeoutException;
 import ru.solodovnikov.rxlocationmanager.error.ElderLocationException;
 import ru.solodovnikov.rxlocationmanager.error.ProviderDisabledException;
 import rx.Observable;
+import rx.Scheduler;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Func1;
 
@@ -19,6 +20,7 @@ public class LocationRequestBuilder {
 
     private final List<Observable<Location>> observables = new ArrayList<>();
     private final RxLocationManager rxLocationManager;
+    private final Scheduler scheduler;
 
     private Location defaultLocation;
 
@@ -26,10 +28,12 @@ public class LocationRequestBuilder {
 
     public LocationRequestBuilder(Context context) {
         this.rxLocationManager = new RxLocationManager(context);
+        this.scheduler = AndroidSchedulers.mainThread();
     }
 
-    LocationRequestBuilder(RxLocationManager rxLocationManager) {
+    LocationRequestBuilder(RxLocationManager rxLocationManager, Scheduler scheduler) {
         this.rxLocationManager = rxLocationManager;
+        this.scheduler = scheduler;
     }
 
     /**
@@ -197,6 +201,6 @@ public class LocationRequestBuilder {
         }
 
         return result.firstOrDefault(defaultLocation)
-                .observeOn(AndroidSchedulers.mainThread());
+                .observeOn(scheduler);
     }
 }

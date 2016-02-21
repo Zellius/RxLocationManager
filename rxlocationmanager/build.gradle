@@ -8,8 +8,6 @@ android {
     defaultConfig {
         minSdkVersion 14
         targetSdkVersion 23
-        versionCode 1
-        versionName "0.1.0"
     }
     buildTypes {
         release {
@@ -38,7 +36,7 @@ dependencies {
 publish {
     groupId = 'com.github.zellius'
     artifactId = 'rxlocationmanager'
-    publishVersion = '0.1.0'
+    publishVersion = '0.1.1'
     desc = 'Android library that helps to get location using standart LocationManager and RxJava'
     licences = ['MIT']
     website = 'https://github.com/Zellius/RxLocationManager'

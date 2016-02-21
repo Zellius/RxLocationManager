@@ -14,6 +14,7 @@ import org.mockito.MockitoAnnotations
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import rx.observers.TestSubscriber
+import rx.schedulers.Schedulers
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
@@ -21,6 +22,7 @@ import java.util.concurrent.TimeoutException
 @Config(sdk = intArrayOf(Build.VERSION_CODES.JELLY_BEAN))
 class RxLocationManagerTest {
     val networkProvider = LocationManager.NETWORK_PROVIDER
+    val scheduler = Schedulers.immediate()
 
     @Mock
     lateinit var locationManager: LocationManager
@@ -40,7 +42,7 @@ class RxLocationManagerTest {
 
         Mockito.`when`(locationManager.getLastKnownLocation(networkProvider)).thenReturn(expectedLocation)
 
-        val rxLocationManager = RxLocationManager(locationManager)
+        val rxLocationManager = RxLocationManager(locationManager, scheduler)
 
         val subscriber = TestSubscriber<Location>()
         rxLocationManager.getLastLocation(networkProvider).subscribe(subscriber)
@@ -60,7 +62,7 @@ class RxLocationManagerTest {
 
         Mockito.`when`(locationManager.getLastKnownLocation(networkProvider)).thenReturn(expectedLocation)
 
-        val rxLocationManager = RxLocationManager(locationManager)
+        val rxLocationManager = getDefaultRxLocationManager()
 
         val subscriber = TestSubscriber<Location>()
         rxLocationManager.getLastLocation(networkProvider, LocationTime(30, TimeUnit.MINUTES)).subscribe(subscriber)
@@ -83,7 +85,7 @@ class RxLocationManagerTest {
             null
         }.`when`(locationManager).requestSingleUpdate(Mockito.eq(networkProvider), Mockito.any(LocationListener::class.java), Mockito.any(Looper::class.java))
 
-        val rxLocationManager = RxLocationManager(locationManager)
+        val rxLocationManager = getDefaultRxLocationManager()
 
         val subscriber = TestSubscriber<Location>()
         rxLocationManager.requestLocation(networkProvider).subscribe(subscriber)
@@ -100,7 +102,7 @@ class RxLocationManagerTest {
         //set provider disabled
         setIsProviderEnabled(isEnabled = false)
 
-        val rxLocationManager = RxLocationManager(locationManager)
+        val rxLocationManager = getDefaultRxLocationManager()
 
         val subscriber = TestSubscriber<Location>()
         rxLocationManager.requestLocation(networkProvider).subscribe(subscriber)
@@ -116,7 +118,7 @@ class RxLocationManagerTest {
         //set provider enabled
         setIsProviderEnabled(isEnabled = true)
 
-        val rxLocationManager = RxLocationManager(locationManager)
+        val rxLocationManager = getDefaultRxLocationManager()
 
         val subscriber = TestSubscriber<Location>()
         rxLocationManager.requestLocation(networkProvider, LocationTime(5, TimeUnit.SECONDS)).subscribe(subscriber)
@@ -128,7 +130,7 @@ class RxLocationManagerTest {
     fun builder_Success() {
         val location1 = buildFakeLocation()
 
-        val locationRequestBuilder = LocationRequestBuilder(RxLocationManager(locationManager))
+        val locationRequestBuilder = getDefaultLocationRequestBuilder()
 
         val createdObservable = locationRequestBuilder.addLastLocation(provider = networkProvider, isNullValid = false)
                 .addRequestLocation(provider = networkProvider, timeOut = LocationTime(5, TimeUnit.SECONDS))
@@ -155,7 +157,7 @@ class RxLocationManagerTest {
         val location1 = buildFakeLocation()
         location1.time = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1)
 
-        val locationRequestBuilder = LocationRequestBuilder(RxLocationManager(locationManager))
+        val locationRequestBuilder = getDefaultLocationRequestBuilder()
 
         val createdObservable = locationRequestBuilder.addLastLocation(provider = networkProvider, howOldCanBe = LocationTime(10, TimeUnit.MINUTES), isNullValid = false)
                 .addRequestLocation(provider = networkProvider, timeOut = LocationTime(5, TimeUnit.SECONDS))
@@ -176,7 +178,7 @@ class RxLocationManagerTest {
     fun builder_Success3() {
         val location1 = buildFakeLocation()
 
-        val locationRequestBuilder = LocationRequestBuilder(RxLocationManager(locationManager))
+        val locationRequestBuilder = getDefaultLocationRequestBuilder()
 
         val createdObservable = locationRequestBuilder.setDefaultLocation(location1).create()
 
@@ -189,6 +191,10 @@ class RxLocationManagerTest {
     private fun setIsProviderEnabled(provider: String = networkProvider, isEnabled: Boolean = false) {
         Mockito.`when`(locationManager.isProviderEnabled(provider)).thenReturn(isEnabled)
     }
+
+    private fun getDefaultRxLocationManager() = RxLocationManager(locationManager, scheduler)
+
+    private fun getDefaultLocationRequestBuilder() = LocationRequestBuilder(getDefaultRxLocationManager(), scheduler)
 
     private fun buildFakeLocation(provider: String = networkProvider): Location {
         val location = Location(provider)

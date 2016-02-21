@@ -1,5 +1,6 @@
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
+apply plugin: 'com.novoda.bintray-release'
 
 android {
     compileSdkVersion 23
@@ -8,8 +9,6 @@ android {
     defaultConfig {
         minSdkVersion 14
         targetSdkVersion 23
-        versionCode 1
-        versionName "0.1.0"
     }
     buildTypes {
         release {
@@ -25,7 +24,7 @@ android {
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile fileTree(include: ['*.jar'], dir: 'libs')
     testCompile 'junit:junit:4.12'
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile 'io.reactivex:rxjava:1.1.0'
@@ -44,4 +43,13 @@ buildscript {
 }
 repositories {
     mavenCentral()
+}
+
+publish {
+    groupId = 'com.github.zellius'
+    artifactId = 'rxlocationmanager.kotlin'
+    publishVersion = '0.1.0'
+    desc = 'Android library written on Kotlin that helps to get location using standart LocationManager and RxJava'
+    licences = ['MIT']
+    website = 'https://github.com/Zellius/RxLocationManager'
 }

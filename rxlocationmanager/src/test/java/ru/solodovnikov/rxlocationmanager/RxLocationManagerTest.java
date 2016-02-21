@@ -23,11 +23,15 @@ import java.util.concurrent.TimeoutException;
 import ru.solodovnikov.rxlocationmanager.error.ElderLocationException;
 import ru.solodovnikov.rxlocationmanager.error.ProviderDisabledException;
 import rx.Observable;
+import rx.Scheduler;
 import rx.observers.TestSubscriber;
+import rx.schedulers.Schedulers;
 
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = Build.VERSION_CODES.JELLY_BEAN)
 public class RxLocationManagerTest {
+
+    private final Scheduler scheduler = Schedulers.immediate();
 
     @Mock
     private LocationManager locationManager;
@@ -50,7 +54,7 @@ public class RxLocationManagerTest {
 
         Mockito.when(locationManager.getLastKnownLocation(provider)).thenReturn(expectedLocation);
 
-        final RxLocationManager rxLocationManager = new RxLocationManager(locationManager);
+        final RxLocationManager rxLocationManager = getDefaullRxLocationManager();
 
         final TestSubscriber<Location> subscriber = new TestSubscriber<>();
         rxLocationManager.getLastLocation(provider).subscribe(subscriber);
@@ -71,7 +75,7 @@ public class RxLocationManagerTest {
 
         Mockito.when(locationManager.getLastKnownLocation(provider)).thenReturn(expectedLocation);
 
-        final RxLocationManager rxLocationManager = new RxLocationManager(locationManager);
+        final RxLocationManager rxLocationManager = getDefaullRxLocationManager();
 
         final TestSubscriber<Location> subscriber = new TestSubscriber<>();
         rxLocationManager.getLastLocation(provider, new LocationTime(30, TimeUnit.MINUTES)).subscribe(subscriber);
@@ -98,7 +102,7 @@ public class RxLocationManagerTest {
         }).when(locationManager)
                 .requestSingleUpdate(Mockito.eq(provider), Mockito.any(LocationListener.class), Mockito.any(Looper.class));
 
-        final RxLocationManager rxLocationManager = new RxLocationManager(locationManager);
+        final RxLocationManager rxLocationManager = getDefaullRxLocationManager();
 
         final TestSubscriber<Location> subscriber = new TestSubscriber<>();
         rxLocationManager.requestLocation(provider).subscribe(subscriber);
@@ -115,7 +119,7 @@ public class RxLocationManagerTest {
         //set provider disabled
         setIsProviderEnabled(provider, false);
 
-        final RxLocationManager rxLocationManager = new RxLocationManager(locationManager);
+        final RxLocationManager rxLocationManager = getDefaullRxLocationManager();
 
         final TestSubscriber<Location> subscriber = new TestSubscriber<>();
         rxLocationManager.requestLocation(provider).subscribe(subscriber);
@@ -131,7 +135,7 @@ public class RxLocationManagerTest {
         //set provider enabled
         setIsProviderEnabled(provider, true);
 
-        final RxLocationManager rxLocationManager = new RxLocationManager(locationManager);
+        final RxLocationManager rxLocationManager = getDefaullRxLocationManager();
 
         final TestSubscriber<Location> subscriber = new TestSubscriber<>();
         rxLocationManager.requestLocation(provider, new LocationTime(5, TimeUnit.SECONDS)).subscribe(subscriber);
@@ -143,7 +147,7 @@ public class RxLocationManagerTest {
     public void builder_Success() throws SecurityException {
         final Location location1 = buildFakeLocation(provider);
 
-        final LocationRequestBuilder locationRequestBuilder = new LocationRequestBuilder(new RxLocationManager(locationManager));
+        final LocationRequestBuilder locationRequestBuilder = getDefaultLocationRequestBuilder();
 
         final Observable<Location> createdObservable = locationRequestBuilder.addLastLocation(provider, false)
                 .addRequestLocation(provider, new LocationTime(5, TimeUnit.SECONDS))
@@ -172,7 +176,7 @@ public class RxLocationManagerTest {
         final Location location1 = buildFakeLocation(provider);
         location1.setTime(System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1));
 
-        final LocationRequestBuilder locationRequestBuilder = new LocationRequestBuilder(new RxLocationManager(locationManager));
+        final LocationRequestBuilder locationRequestBuilder = getDefaultLocationRequestBuilder();
 
         final Observable<Location> createdObservable = locationRequestBuilder.addLastLocation(provider, new LocationTime(10, TimeUnit.MINUTES), false)
                 .addRequestLocation(provider, new LocationTime(5, TimeUnit.SECONDS))
@@ -193,7 +197,7 @@ public class RxLocationManagerTest {
     public void builder_Success3() throws SecurityException {
         final Location location1 = buildFakeLocation(provider);
 
-        final LocationRequestBuilder locationRequestBuilder = new LocationRequestBuilder(new RxLocationManager(locationManager));
+        final LocationRequestBuilder locationRequestBuilder = getDefaultLocationRequestBuilder();
 
         final Observable<Location> createdObservable = locationRequestBuilder
                 .setDefaultLocation(location1)
@@ -207,6 +211,16 @@ public class RxLocationManagerTest {
 
     private void setIsProviderEnabled(String provider, boolean isEnabled) {
         Mockito.when(locationManager.isProviderEnabled(provider)).thenReturn(isEnabled);
+    }
+
+    private RxLocationManager getDefaullRxLocationManager()
+    {
+        return new RxLocationManager(locationManager, scheduler);
+    }
+
+    private LocationRequestBuilder getDefaultLocationRequestBuilder()
+    {
+        return new LocationRequestBuilder(getDefaullRxLocationManager(), scheduler);
     }
 
     private Location buildFakeLocation(String provider) {

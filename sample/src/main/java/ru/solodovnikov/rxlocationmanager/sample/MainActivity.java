@@ -36,6 +36,7 @@ public class MainActivity extends Activity {
 
             @Override
             public void onNext(Location location) {
+                final String name = Thread.currentThread().getName();
                 Log.d(getClass().getSimpleName(), location != null ? location.toString() : "Location is empty =(");
             }
         });

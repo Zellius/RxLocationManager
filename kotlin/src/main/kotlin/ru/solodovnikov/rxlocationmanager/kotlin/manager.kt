@@ -9,13 +9,14 @@ import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import rx.Observable
+import rx.Scheduler
 import rx.Subscriber
 import rx.Subscription
 import rx.android.schedulers.AndroidSchedulers
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
-class RxLocationManager internal constructor(private val locationManager: LocationManager) {
+class RxLocationManager internal constructor(private val locationManager: LocationManager, private val scheduler: Scheduler = AndroidSchedulers.mainThread()) {
     constructor(context: Context) : this(context.getSystemService(Context.LOCATION_SERVICE) as LocationManager)
 
     /**
@@ -63,7 +64,7 @@ class RxLocationManager internal constructor(private val locationManager: Locati
                     .compose { if (timeOut != null) it.timeout(timeOut.time, timeOut.timeUnit) else it }
                     .compose(applySchedulers())
 
-    private fun applySchedulers() = Observable.Transformer<Location, Location> { it.subscribeOn(AndroidSchedulers.mainThread()) }
+    private fun applySchedulers() = Observable.Transformer<Location, Location> { it.subscribeOn(scheduler).observeOn(scheduler) }
 
     private fun isLocationNotOld(location: Location, howOldCanBe: LocationTime) =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
@@ -150,7 +151,7 @@ data class LocationTime(val time: Long, val timeUnit: TimeUnit) {
     }
 }
 
-class LocationRequestBuilder internal constructor(private val rxLocationManager: RxLocationManager) {
+class LocationRequestBuilder internal constructor(private val rxLocationManager: RxLocationManager, private val scheduler: Scheduler = AndroidSchedulers.mainThread()) {
     private var defaultLocation: Location? = null
     private var returnDefaultLocationOnError = false
     private val observables: MutableList<Observable<Location>> = arrayListOf()
@@ -187,7 +188,7 @@ class LocationRequestBuilder internal constructor(private val rxLocationManager:
                 .filter { if (!isNullValid && it == null) false else true }
                 .onErrorResumeNext {
                     if (it is ElderLocationException) {
-                        return@onErrorResumeNext  Observable.empty<Location>()
+                        return@onErrorResumeNext Observable.empty<Location>()
                     }
                     if (it is ProviderDisabledException) {
                         return@onErrorResumeNext Observable.empty<Location>()
@@ -231,6 +232,6 @@ class LocationRequestBuilder internal constructor(private val rxLocationManager:
         }
 
         return result.firstOrDefault(defaultLocation)
-                .observeOn(AndroidSchedulers.mainThread())
+                .observeOn(scheduler)
     }
 }
