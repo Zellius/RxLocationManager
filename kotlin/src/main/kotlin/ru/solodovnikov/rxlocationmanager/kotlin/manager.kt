@@ -12,7 +12,6 @@ import rx.Observable
 import rx.Subscriber
 import rx.Subscription
 import rx.android.schedulers.AndroidSchedulers
-import rx.lang.kotlin.toSingletonObservable
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
@@ -29,17 +28,22 @@ class RxLocationManager internal constructor(private val locationManager: Locati
      * @see ElderLocationException
      */
     fun getLastLocation(provider: String, howOldCanBe: LocationTime? = null) =
-            locationManager.getLastKnownLocation(provider)
-                    .toSingletonObservable()
-                    .compose {
-                        if (howOldCanBe == null) it else it.map {
-                            if (it != null && !isLocationNotOld(it, howOldCanBe)) {
-                                throw ElderLocationException(it)
-                            }
+            Observable.create<Location> {
+                try {
+                    it.onNext(locationManager.getLastKnownLocation(provider))
+                    it.onCompleted()
+                } catch(ex: SecurityException) {
+                    it.onError(ex)
+                }
+            }.compose {
+                if (howOldCanBe == null) it else it.map {
+                    if (it != null && !isLocationNotOld(it, howOldCanBe)) {
+                        throw ElderLocationException(it)
+                    }
 
-                            it
-                        }
-                    }.compose(applySchedulers())
+                    it
+                }
+            }.compose(applySchedulers())
 
     /**
      * Try to get current location by specific provider.
@@ -104,7 +108,11 @@ class RxLocationManager internal constructor(private val locationManager: Locati
                     }
                 }
 
-                locationManager.requestSingleUpdate(provider, locationListener, null)
+                try {
+                    locationManager.requestSingleUpdate(provider, locationListener, null)
+                } catch (ex: SecurityException) {
+                    subscriber!!.onError(ex)
+                }
 
                 subscriber!!.add(object : Subscription {
                     override fun isUnsubscribed() = subscriber.isUnsubscribed
@@ -114,7 +122,11 @@ class RxLocationManager internal constructor(private val locationManager: Locati
                             subscriber.unsubscribe()
                         }
 
-                        removeUpdates()
+                        try {
+                            removeUpdates()
+                        } catch(ex: SecurityException) {
+                            subscriber.onError(ex)
+                        }
                     }
                 })
             } else {
@@ -175,10 +187,10 @@ class LocationRequestBuilder internal constructor(private val rxLocationManager:
                 .filter { if (!isNullValid && it == null) false else true }
                 .onErrorResumeNext {
                     if (it is ElderLocationException) {
-                        Observable.empty<Location>()
+                        return@onErrorResumeNext  Observable.empty<Location>()
                     }
                     if (it is ProviderDisabledException) {
-                        Observable.empty<Location>()
+                        return@onErrorResumeNext Observable.empty<Location>()
                     }
                     Observable.error<Location>(it)
                 }
@@ -219,5 +231,6 @@ class LocationRequestBuilder internal constructor(private val rxLocationManager:
         }
 
         return result.firstOrDefault(defaultLocation)
+                .observeOn(AndroidSchedulers.mainThread())
     }
 }

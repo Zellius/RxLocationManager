@@ -31,7 +31,7 @@ public class MainActivity extends Activity {
 
             @Override
             public void onError(Throwable e) {
-
+                Log.d(getClass().getSimpleName(), e.toString());
             }
 
             @Override
