@@ -104,6 +104,8 @@ class RxLocationManager internal constructor(private val locationManager: Locati
                     }
                 }
 
+                locationManager.requestSingleUpdate(provider, locationListener, null)
+
                 subscriber!!.add(object : Subscription {
                     override fun isUnsubscribed() = subscriber.isUnsubscribed
 
@@ -136,10 +138,10 @@ data class LocationTime(val time: Long, val timeUnit: TimeUnit) {
     }
 }
 
-class LocationRequestBuilder internal constructor(val rxLocationManager: RxLocationManager) {
-    var defaultLocation: Location? = null
-    var returnDefaultLocationOnError = false
-    val observables: MutableList<Observable<Location>> = arrayListOf()
+class LocationRequestBuilder internal constructor(private val rxLocationManager: RxLocationManager) {
+    private var defaultLocation: Location? = null
+    private var returnDefaultLocationOnError = false
+    private val observables: MutableList<Observable<Location>> = arrayListOf()
 
     constructor(context: Context) : this(RxLocationManager(context))
 
