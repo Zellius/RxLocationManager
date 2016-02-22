@@ -12,9 +12,15 @@ Download
   <type>pom</type>
 </dependency>
 ```
-######Gradle
+#####Gradle
+
+######Java
 ```gradle
 compile 'com.github.zellius:rxlocationmanager:0.1.1'
+```
+######Kotlin
+```gradle
+compile 'com.github.zellius:rxlocationmanager.kotlin:0.1.0'
 ```
 
 Feautures
