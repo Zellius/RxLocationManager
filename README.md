@@ -38,8 +38,8 @@ Samples
 ```java
 /*
 get last known location from network provider. 
-It will emitt only those locations that have been received up to hour ago
-It will emitt ElderLocationException if location is too old
+It will emit only those locations that have been received up to hour ago
+It will emit ElderLocationException if location is too old
 */
 final RxLocationManager rxLocationManager = new RxLocationManager(this);
 rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime.OneHour()).subscribe();
@@ -48,7 +48,7 @@ rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime
 ```java
 /*
 Request current location with timeout. 
-It will emitt ProviderDisabledException in case of timeout
+It will emit ProviderDisabledException in case of timeout
 */
 final RxLocationManager rxLocationManager = new RxLocationManager(this);
 rxLocationManager.requestLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(10, TimeUnit.SECONDS)).subscribe();
@@ -59,7 +59,7 @@ rxLocationManager.requestLocation(LocationManager.NETWORK_PROVIDER, new Location
 /*
 1. Try to get valid last known location
 2. If last known location is not valid, try to get current location from GPS
-3. Emitt a default location if no location was emitted.
+3. Emit a default location if no location was emitted.
 */
 final LocationRequestBuilder locationRequestBuilder = new LocationRequestBuilder(this);
 locationRequestBuilder.addLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(30, TimeUnit.SECONDS), false)
