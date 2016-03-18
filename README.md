@@ -1,5 +1,7 @@
 RxLocationManager
 -----------------
+[![Android Arsenal](https://img.shields.io/badge/Android%20Arsenal-RxLocationManager-orange.svg?style=flat)](http://android-arsenal.com/details/1/3291)
+
 Android library that helps to get location using standart LocationManager and RxJava. It does not use the Google Play Services and it's easier to use.
 
 Download
