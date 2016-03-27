@@ -13,3 +13,7 @@ script:
  - ./gradlew clean assemble
 env:
  - GRADLE_OPTS="-Xmx512m -XX:MaxPermSize=512m"
+ branches:
+  only:
+    - master
+    - dev
