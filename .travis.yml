@@ -9,5 +9,4 @@ android:
 before_install:
  - chmod +x gradlew
 script: 
- - ./gradlew :rxlocationmanager:build
- - ./gradlew :kotlin:build
+ - ./gradlew clean build
