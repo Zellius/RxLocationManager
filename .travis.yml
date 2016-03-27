@@ -9,6 +9,7 @@ android:
 before_install:
  - chmod +x gradlew
 script: 
- - ./gradlew clean build
+ - ./gradlew check -PdisablePreDex --continue --stacktrace
+ - ./gradlew clean assemble
 env:
  - GRADLE_OPTS="-Xmx512m -XX:MaxPermSize=512m"
