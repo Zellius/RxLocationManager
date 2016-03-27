@@ -1,9 +1,9 @@
 language: android
 android:
   components:
-	- platform-tools
-	- build-tools-23.0.2
-	- android-23
-	
-script: ./gradlew :rxlocationmanager:build
-script: ./gradlew :kotlin:build
+    - platform-tools
+    - build-tools-23.0.2
+    - android-23	
+script: 
+    - ./gradlew :rxlocationmanager:build
+    - ./gradlew :kotlin:build
