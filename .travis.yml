@@ -10,5 +10,5 @@ before_install:
  - chmod +x gradlew
 script: 
  - ./gradlew clean build
- env:
+env:
  - GRADLE_OPTS="-Xmx512m -XX:MaxPermSize=512m"
