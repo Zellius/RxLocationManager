@@ -3,7 +3,9 @@ android:
   components:
     - platform-tools
     - build-tools-23.0.2
-    - android-23	
+    - android-23
+before_install:
+ - chmod +x gradlew
 script: 
-    - ./gradlew :rxlocationmanager:build
-    - ./gradlew :kotlin:build
+ - ./gradlew :rxlocationmanager:build
+ - ./gradlew :kotlin:build
