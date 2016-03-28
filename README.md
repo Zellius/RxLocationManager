@@ -1,38 +1,17 @@
 RxLocationManager
 -----------------
-[![Android Arsenal](https://img.shields.io/badge/Android%20Arsenal-RxLocationManager-orange.svg?style=flat)](http://android-arsenal.com/details/1/3291)
-[![Build Status](https://travis-ci.org/Zellius/RxLocationManager.svg?branch=master)](https://travis-ci.org/Zellius/RxLocationManager)
+[![Android Arsenal](https://img.shields.io/badge/Android%20Arsenal-RxLocationManager-orange.svg?style=flat)](http://android-arsenal.com/details/1/3291) [![Build Status](https://travis-ci.org/Zellius/RxLocationManager.svg?branch=master)](https://travis-ci.org/Zellius/RxLocationManager)
 
 Android library that helps to get location using standart LocationManager and RxJava. It does not use the Google Play Services and it's easier to use.
-
-Download
------------------
-```xml
-<dependency>
-  <groupId>com.github.zellius</groupId>
-  <artifactId>rxlocationmanager</artifactId>
-  <version>0.1.1</version>
-  <type>pom</type>
-</dependency>
-```
-#####Gradle
-
-######Java
-```gradle
-compile 'com.github.zellius:rxlocationmanager:0.1.1'
-```
-######Kotlin
-```gradle
-compile 'com.github.zellius:rxlocationmanager.kotlin:0.1.0'
-```
 
 Feautures
 -----------------
 
  - Get last known device location from any location provider. You can specify how long the location could be obtained. For example you want only those locations that have been received up to 30 minutes ago.
  - Request current device location. You can specify request time out or you can wait until observable will emit any value or error.
- - Yo can use LocationRequestBuilder to build sequence of location requests.
+ - You can use LocationRequestBuilder to build sequence of location requests.
  - All methods will return an rxJava Observable, so you can perform transofrm/map... etc methods on it.
+ - No need to check is Google Play Services valid or installed on device. 
 
 Samples
 -----------------
@@ -73,6 +52,27 @@ locationRequestBuilder.addLastLocation(LocationManager.NETWORK_PROVIDER, new Loc
 > **Note:** For default the LocationRequestBuilder will emit a default location in case of any exceptions. If you want to receive any exceptions you should use 
 >```java
 locationRequestBuilder.setReturnDefaultLocationOnError(false)
+```
+
+Download
+-----------------
+```xml
+<dependency>
+  <groupId>com.github.zellius</groupId>
+  <artifactId>rxlocationmanager</artifactId>
+  <version>0.1.1</version>
+  <type>pom</type>
+</dependency>
+```
+#####Gradle
+
+######Java
+```gradle
+compile 'com.github.zellius:rxlocationmanager:0.1.1'
+```
+######Kotlin
+```gradle
+compile 'com.github.zellius:rxlocationmanager.kotlin:0.1.0'
 ```
 
 ## License
