@@ -1,0 +1,19 @@
+language: android
+android:
+  components:
+    - tools
+    - platform-tools
+    - build-tools-23.0.2
+    - android-23
+    - extra-android-m2repository
+before_install:
+ - chmod +x gradlew
+script: 
+ - ./gradlew check -PdisablePreDex --continue --stacktrace
+ - ./gradlew clean assemble
+env:
+ - GRADLE_OPTS="-Xmx512m -XX:MaxPermSize=512m"
+branches:
+  only:
+    - master
+    - dev
