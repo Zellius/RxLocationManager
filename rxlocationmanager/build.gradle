@@ -7,6 +7,10 @@ jacoco {
     toolVersion = "0.7.1.201405082137"
 }
 
+coveralls {
+    jacocoReportPath = "${buildDir}/reports/coverage/debug/report.xml"
+}
+
 android {
     compileSdkVersion 23
     buildToolsVersion "23.0.2"

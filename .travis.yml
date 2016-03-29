@@ -19,4 +19,4 @@ branches:
     - dev
     - coveralls
 after_success:
- - ./gradlew :rxlocationmanager:jacocoTestReport coveralls
+ - ./gradlew jacocoTestReport coveralls
