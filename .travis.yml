@@ -17,3 +17,6 @@ branches:
   only:
     - master
     - dev
+    - coveralls
+after_success:
+ - ./gradlew :rxlocationmanager:jacocoTestReport coveralls
