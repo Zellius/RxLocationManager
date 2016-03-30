@@ -18,4 +18,6 @@ branches:
     - dev
     - coveralls
 after_success:
- - ./gradlew clean jacocoTestReport coveralls
+ - ./gradlew clean jacocoTestReport
+ - ./gradlew :rxlocationmanager:coveralls
+ - ./gradlew :kotlin:coveralls
