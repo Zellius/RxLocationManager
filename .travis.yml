@@ -9,8 +9,7 @@ android:
 before_install:
  - chmod +x gradlew
 script: 
- - ./gradlew check -PdisablePreDex --continue --stacktrace
- - ./gradlew clean assemble
+ - ./gradlew :rxlocationmanager:clean build :kotlin:clean build -PdisablePreDex --continue --stacktrace
 env:
  - GRADLE_OPTS="-Xmx512m -XX:MaxPermSize=512m"
 branches:
@@ -19,4 +18,4 @@ branches:
     - dev
     - coveralls
 after_success:
- - ./gradlew jacocoTestReport coveralls
+ - ./gradlew :kotlin:jacocoTestReport :rxlocationmanager:jacocoTestReport coveralls
