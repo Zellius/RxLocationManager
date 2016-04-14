@@ -1,11 +1,17 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
+apply plugin: 'jacoco'
+apply plugin: 'com.github.kt3k.coveralls'
+
+coveralls {
+    jacocoReportPath = "${buildDir}/reports/jacoco/jacocoTestReport/jacocoTestReport.xml"
+}
 
 buildscript {
     repositories {
         jcenter()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:1.5.0'
+        classpath 'com.android.tools.build:gradle:2.0.0'
         classpath 'com.novoda:bintray-release:0.3.4'
         classpath 'org.kt3k.gradle.plugin:coveralls-gradle-plugin:2.6.3'
 
@@ -19,7 +25,60 @@ allprojects {
         jcenter()
     }
 }
+subprojects {
+    ext.srcDirName = 'src/main/java'
+
+    if (!project.name.contains('sample')) {
+        apply plugin: 'jacoco'
+
+        task jacocoTestReport(type: JacocoReport, dependsOn: "testDebugUnitTest") {
+            group = "Reporting"
+            description = "Generate Jacoco coverage reports"
+
+            classDirectories = fileTree(
+                    dir: "${project.buildDir}/intermediates/classes",
+                    excludes: ['**/R.class',
+                               '**/R$*.class',
+                               '**/*$ViewInjector*.*',
+                               '**/BuildConfig.*',
+                               '**/Manifest*.*']
+            )
+
+            def coverageSourceDirs = [
+                    project.srcDirName
+            ]
+
+            additionalSourceDirs = files(coverageSourceDirs)
+            sourceDirectories = files(coverageSourceDirs)
+            executionData = files("${project.buildDir}/jacoco/testDebugUnitTest.exec")
+
+            reports {
+                xml.enabled = true
+                html.enabled = true
+            }
+        }
+    }
+}
+project(':kotlin') {
+    ext.srcDirName = 'src/main/kotlin'
+}
 
 task clean(type: Delete) {
     delete rootProject.buildDir
+}
+
+task jacocoRootReport(type: JacocoReport, group: 'Coverage reports', description: 'Generates an aggregate report from all subprojects') {
+    def validSubprojects = subprojects.findAll {
+        !it.name.contains('sample')
+    }
+    dependsOn = validSubprojects.jacocoTestReport
+
+    additionalSourceDirs = files(validSubprojects.jacocoTestReport.additionalSourceDirs)
+    sourceDirectories = files(validSubprojects.jacocoTestReport.additionalSourceDirs)
+    executionData = files(validSubprojects.jacocoTestReport.executionData)
+
+    reports {
+        html.enabled = true // human readable
+        xml.enabled = true // required by coveralls
+    }
 }
