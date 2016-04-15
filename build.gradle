@@ -55,6 +55,8 @@ subprojects {
             reports {
                 xml.enabled = true
                 html.enabled = true
+
+                html.destination = "${buildDir}/reports/${name}"
             }
         }
     }
