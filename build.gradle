@@ -73,7 +73,7 @@ task jacocoRootReport(type: JacocoReport, group: 'Coverage reports', description
     }
     dependsOn = validSubprojects.jacocoTestReport
 
-    classDirectories = fileTree(validSubprojects.jacocoTestReport.classDirectories)
+    classDirectories = files(validSubprojects.jacocoTestReport.classDirectories)
     additionalSourceDirs = files(validSubprojects.jacocoTestReport.additionalSourceDirs)
     sourceDirectories = files(validSubprojects.jacocoTestReport.additionalSourceDirs)
     executionData = files(validSubprojects.jacocoTestReport.executionData)
