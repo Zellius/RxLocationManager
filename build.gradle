@@ -2,10 +2,6 @@
 apply plugin: 'jacoco'
 apply plugin: 'com.github.kt3k.coveralls'
 
-coveralls {
-    jacocoReportPath = "${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.xml"
-}
-
 buildscript {
     repositories {
         jcenter()
@@ -91,4 +87,11 @@ task jacocoRootReport(type: JacocoReport, group: 'Coverage reports', description
         html.enabled = true // human readable
         xml.enabled = true // required by coveralls
     }
+}
+
+coveralls {
+    jacocoReportPath = "${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.xml"
+    sourceDirs = subprojects.findAll {
+        !it.name.contains('sample')
+    }.android.sourceSets.main.java.srcDirs.flatten()
 }
