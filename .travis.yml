@@ -8,12 +8,13 @@ android:
     - extra-android-m2repository
 before_install:
  - chmod +x gradlew
-script: 
- - ./gradlew check -PdisablePreDex --continue --stacktrace
- - ./gradlew clean assemble
+script:
+ - ./gradlew clean build -PdisablePreDex --continue --stacktrace
 env:
  - GRADLE_OPTS="-Xmx512m -XX:MaxPermSize=512m"
 branches:
   only:
     - master
     - dev
+after_success:
+ - ./gradlew clean jacocoRootReport coveralls
