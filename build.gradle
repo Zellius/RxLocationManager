@@ -1,6 +1,6 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
-apply plugin: 'jacoco'
 apply plugin: 'com.github.kt3k.coveralls'
+apply plugin: 'jacoco'
 
 buildscript {
     repositories {
@@ -42,12 +42,8 @@ subprojects {
                                '**/Manifest*.*']
             )
 
-            def coverageSourceDirs = [
-                    project.android.sourceSets.main.java.srcDirs
-            ]
-
-            additionalSourceDirs = files(coverageSourceDirs)
-            sourceDirectories = files(coverageSourceDirs)
+            additionalSourceDirs = files(project.android.sourceSets.main.java.srcDirs)
+            sourceDirectories = files(project.android.sourceSets.main.java.srcDirs)
             executionData = files("${project.buildDir}/jacoco/testDebugUnitTest.exec")
 
             reports {
@@ -58,7 +54,6 @@ subprojects {
     }
 }
 project(':kotlin') {
-    apply plugin: 'kotlin-android'
     android {
         sourceSets {
             main.java.srcDirs += 'src/main/kotlin'
@@ -72,10 +67,11 @@ task clean(type: Delete) {
     delete rootProject.buildDir
 }
 
+def validSubprojects = subprojects.findAll {
+    !it.name.contains('sample')
+}
+
 task jacocoRootReport(type: JacocoReport, group: 'Coverage reports', description: 'Generates an aggregate report from all subprojects') {
-    def validSubprojects = subprojects.findAll {
-        !it.name.contains('sample')
-    }
     dependsOn = validSubprojects.jacocoTestReport
 
     classDirectories = files(validSubprojects.jacocoTestReport.classDirectories)
@@ -91,7 +87,5 @@ task jacocoRootReport(type: JacocoReport, group: 'Coverage reports', description
 
 coveralls {
     jacocoReportPath = "${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.xml"
-    sourceDirs = subprojects.findAll {
-        !it.name.contains('sample')
-    }.android.sourceSets.main.java.srcDirs.flatten()
+    sourceDirs = validSubprojects.android.sourceSets.main.java.srcDirs.flatten()
 }
