@@ -9,11 +9,14 @@ coveralls {
 buildscript {
     repositories {
         jcenter()
+        mavenCentral()
     }
+    ext.kotlin_version = '1.0.0'
     dependencies {
         classpath 'com.android.tools.build:gradle:2.0.0'
         classpath 'com.novoda:bintray-release:0.3.4'
         classpath 'org.kt3k.gradle.plugin:coveralls-gradle-plugin:2.6.3'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
@@ -26,10 +29,9 @@ allprojects {
     }
 }
 subprojects {
-    ext.srcDirName = 'src/main/java'
-
     if (!project.name.contains('sample')) {
         apply plugin: 'jacoco'
+        apply plugin: 'com.android.library'
 
         task jacocoTestReport(type: JacocoReport, dependsOn: "testDebugUnitTest") {
             group = "Reporting"
@@ -45,7 +47,7 @@ subprojects {
             )
 
             def coverageSourceDirs = [
-                    project.srcDirName
+                    project.android.sourceSets.main.java.srcDirs
             ]
 
             additionalSourceDirs = files(coverageSourceDirs)
@@ -60,7 +62,14 @@ subprojects {
     }
 }
 project(':kotlin') {
-    ext.srcDirName = 'src/main/kotlin'
+    apply plugin: 'kotlin-android'
+    android {
+        sourceSets {
+            main.java.srcDirs += 'src/main/kotlin'
+            test.java.srcDirs += 'src/test/kotlin'
+            androidTest.java.srcDirs += 'src/androidTest/kotlin'
+        }
+    }
 }
 
 task clean(type: Delete) {
