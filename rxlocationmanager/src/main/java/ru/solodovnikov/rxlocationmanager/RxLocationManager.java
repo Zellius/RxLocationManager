@@ -11,6 +11,7 @@ import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeoutException;
 
 import ru.solodovnikov.rxlocationmanager.error.ElderLocationException;
@@ -48,12 +49,11 @@ public class RxLocationManager {
      * @see ElderLocationException
      */
     public Observable<Location> getLastLocation(final @NonNull String provider, final @Nullable LocationTime howOldCanBe) {
-        return Observable.create(new Observable.OnSubscribe<Location>() {
+        return Observable.fromCallable(new Callable<Location>() {
             @Override
-            public void call(Subscriber<? super Location> subscriber) {
+            public Location call() throws Exception {
                 try {
-                    subscriber.onNext(locationManager.getLastKnownLocation(provider));
-                    subscriber.onCompleted();
+                    return locationManager.getLastKnownLocation(provider);
                 } catch (SecurityException ex) {
                     throw ex;
                 }
@@ -110,7 +110,7 @@ public class RxLocationManager {
      *
      * @param provider provider name
      * @return observable that emit current location
-     * @see  ProviderDisabledException
+     * @see ProviderDisabledException
      */
     public Observable<Location> requestLocation(@NonNull String provider) {
         return requestLocation(provider, null);
