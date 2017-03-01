@@ -53,7 +53,7 @@ subprojects {
         }
     }
 }
-project(':kotlin') {
+project(':rx_location_manager') {
     android {
         sourceSets {
             main.java.srcDirs += 'src/main/kotlin'

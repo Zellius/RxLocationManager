@@ -1,1 +1,1 @@
-include ':rxlocationmanager', ':sample', ':kotlin', ':kotlin_sample'
+include ':sample', ':rx_location_manager', ':kotlin_sample'
