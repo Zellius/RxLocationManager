@@ -88,7 +88,7 @@ class RxLocationManagerTest {
 
         val subscriber = TestSubscriber<Location>()
         rxLocationManager.requestLocation(networkProvider).subscribe(subscriber)
-        subscriber.awaitTerminalEvent()
+        subscriber.awaitTerminalEvent(30, TimeUnit.SECONDS)
         subscriber.assertCompleted()
         subscriber.assertValue(expectedLocation)
     }

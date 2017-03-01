@@ -8,15 +8,16 @@ import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
+import rx.Emitter
 import rx.Observable
 import rx.Scheduler
-import rx.Subscriber
-import rx.Subscription
 import rx.android.schedulers.AndroidSchedulers
+import rx.functions.Action1
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
-class RxLocationManager internal constructor(private val locationManager: LocationManager, private val scheduler: Scheduler = AndroidSchedulers.mainThread()) {
+class RxLocationManager internal constructor(private val locationManager: LocationManager,
+                                             private val scheduler: Scheduler = AndroidSchedulers.mainThread()) {
     constructor(context: Context) : this(context.getSystemService(Context.LOCATION_SERVICE) as LocationManager)
 
     /**
@@ -28,23 +29,17 @@ class RxLocationManager internal constructor(private val locationManager: Locati
      * @return observable that emit last known location. May emit null
      * @see ElderLocationException
      */
-    fun getLastLocation(provider: String, howOldCanBe: LocationTime? = null) =
-            Observable.create<Location> {
-                try {
-                    it.onNext(locationManager.getLastKnownLocation(provider))
-                    it.onCompleted()
-                } catch(ex: SecurityException) {
-                    it.onError(ex)
-                }
-            }.compose {
-                if (howOldCanBe == null) it else it.map {
-                    if (it != null && !isLocationNotOld(it, howOldCanBe)) {
-                        throw ElderLocationException(it)
-                    }
+    fun getLastLocation(provider: String, howOldCanBe: LocationTime? = null): Observable<Location?> =
+            Observable.fromCallable { locationManager.getLastKnownLocation(provider) }
+                    .compose {
+                        if (howOldCanBe == null) it else it.map {
+                            if (it != null && !isLocationNotOld(it, howOldCanBe)) {
+                                throw ElderLocationException(it)
+                            }
 
-                    it
-                }
-            }.compose(applySchedulers())
+                            it
+                        }
+                    }.compose(applySchedulers())
 
     /**
      * Try to get current location by specific provider.
@@ -57,14 +52,14 @@ class RxLocationManager internal constructor(private val locationManager: Locati
      * @see TimeoutException
      * @see ProviderDisabledException
      */
-    fun requestLocation(provider: String, timeOut: LocationTime? = null) = requestLocation(provider, timeOut, true)
+    fun requestLocation(provider: String, timeOut: LocationTime? = null): Observable<Location?> = requestLocation(provider, timeOut, true)
 
     internal fun requestLocation(provider: String, timeOut: LocationTime?, throwExceptionIfDisabled: Boolean) =
-            Observable.create(RxLocationListener(locationManager, provider, throwExceptionIfDisabled))
+            Observable.create(RxLocationListener(locationManager, provider, throwExceptionIfDisabled), Emitter.BackpressureMode.NONE)
                     .compose { if (timeOut != null) it.timeout(timeOut.time, timeOut.timeUnit) else it }
                     .compose(applySchedulers())
 
-    private fun applySchedulers() = Observable.Transformer<Location, Location> { it.subscribeOn(scheduler).observeOn(scheduler) }
+    private fun applySchedulers() = Observable.Transformer<Location?, Location?> { it.subscribeOn(scheduler).observeOn(scheduler) }
 
     private fun isLocationNotOld(location: Location, howOldCanBe: LocationTime) =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
@@ -75,23 +70,20 @@ class RxLocationManager internal constructor(private val locationManager: Locati
 
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR1)
     private fun isLocationNotOld17(location: Location, howOldCanBe: LocationTime) =
-            SystemClock.elapsedRealtimeNanos() - location.elapsedRealtimeNanos < howOldCanBe.timeUnit.toNanos(howOldCanBe.time);
+            SystemClock.elapsedRealtimeNanos() - location.elapsedRealtimeNanos < howOldCanBe.timeUnit.toNanos(howOldCanBe.time)
 
     private fun isLocationNotOldDefault(location: Location, howOldCanBe: LocationTime) =
             System.currentTimeMillis() - location.time < howOldCanBe.timeUnit.toMillis(howOldCanBe.time)
 
 
-    private class RxLocationListener(val locationManager: LocationManager, val provider: String, val throwExceptionIfDisabled: Boolean) : Observable.OnSubscribe<Location> {
-        var locationListener: LocationListener? = null
+    private class RxLocationListener(val locationManager: LocationManager, val provider: String, val throwExceptionIfDisabled: Boolean) : Action1<Emitter<Location>> {
 
-        override fun call(subscriber: Subscriber<in Location>?) {
+        override fun call(emitter: Emitter<Location>) {
             if (locationManager.isProviderEnabled(provider)) {
-                locationListener = object : LocationListener {
+                val locationListener = object : LocationListener {
                     override fun onLocationChanged(location: Location?) {
-                        if (subscriber != null && !subscriber.isUnsubscribed) {
-                            subscriber.onNext(location)
-                            subscriber.onCompleted()
-                        }
+                        emitter.onNext(location)
+                        emitter.onCompleted()
                     }
 
                     override fun onProviderDisabled(p0: String?) {
@@ -103,8 +95,8 @@ class RxLocationManager internal constructor(private val locationManager: Locati
                     }
 
                     override fun onProviderEnabled(p0: String?) {
-                        if (provider.equals(p0)) {
-                            subscriber!!.onError(ProviderDisabledException(provider))
+                        if (provider == p0) {
+                            emitter.onError(ProviderDisabledException(provider))
                         }
                     }
                 }
@@ -112,32 +104,13 @@ class RxLocationManager internal constructor(private val locationManager: Locati
                 try {
                     locationManager.requestSingleUpdate(provider, locationListener, null)
                 } catch (ex: SecurityException) {
-                    subscriber!!.onError(ex)
+                    emitter.onError(ex)
                 }
 
-                subscriber!!.add(object : Subscription {
-                    override fun isUnsubscribed() = subscriber.isUnsubscribed
+                emitter.setCancellation { locationManager.removeUpdates(locationListener) }
 
-                    override fun unsubscribe() {
-                        if (!subscriber.isUnsubscribed) {
-                            subscriber.unsubscribe()
-                        }
-
-                        try {
-                            removeUpdates()
-                        } catch(ex: SecurityException) {
-                            subscriber.onError(ex)
-                        }
-                    }
-                })
             } else {
-                if (throwExceptionIfDisabled) subscriber!!.onError(ProviderDisabledException(provider)) else subscriber!!.onCompleted()
-            }
-        }
-
-        private fun removeUpdates() {
-            if (locationListener != null) {
-                locationManager.removeUpdates(locationListener)
+                if (throwExceptionIfDisabled) emitter.onError(ProviderDisabledException(provider)) else emitter.onCompleted()
             }
         }
     }
@@ -146,15 +119,18 @@ class RxLocationManager internal constructor(private val locationManager: Locati
 
 data class LocationTime(val time: Long, val timeUnit: TimeUnit) {
     companion object {
-        fun OneDay(): LocationTime = LocationTime(1L, TimeUnit.DAYS)
-        fun OneHour(): LocationTime = LocationTime(1L, TimeUnit.HOURS)
+        @JvmField
+        val ONE_DAY = LocationTime(1L, TimeUnit.DAYS)
+        @JvmField
+        val ONE_HOUR = LocationTime(1L, TimeUnit.HOURS)
     }
 }
 
-class LocationRequestBuilder internal constructor(private val rxLocationManager: RxLocationManager, private val scheduler: Scheduler = AndroidSchedulers.mainThread()) {
+class LocationRequestBuilder internal constructor(private val rxLocationManager: RxLocationManager,
+                                                  private val scheduler: Scheduler = AndroidSchedulers.mainThread()) {
     private var defaultLocation: Location? = null
     private var returnDefaultLocationOnError = false
-    private val observables: MutableList<Observable<Location>> = arrayListOf()
+    private val observables: MutableList<Observable<Location?>> = arrayListOf()
 
     constructor(context: Context) : this(RxLocationManager(context))
 
@@ -167,7 +143,7 @@ class LocationRequestBuilder internal constructor(private val rxLocationManager:
      *
      * @return same builder
      */
-    fun addRequestLocation(provider: String, timeOut: LocationTime? = null, transformer: Observable.Transformer<Location, Location>? = null): LocationRequestBuilder {
+    fun addRequestLocation(provider: String, timeOut: LocationTime? = null, transformer: Observable.Transformer<Location?, Location?>? = null): LocationRequestBuilder {
         val o = rxLocationManager.requestLocation(provider, timeOut, false)
                 .onErrorResumeNext { if (it is TimeoutException) Observable.empty<Location>() else Observable.error<Location>(it) }
 
@@ -184,7 +160,7 @@ class LocationRequestBuilder internal constructor(private val rxLocationManager:
      * @param transformer optional extra transformer
      * @return same builder
      */
-    fun addLastLocation(provider: String, howOldCanBe: LocationTime? = null, isNullValid: Boolean = false, transformer: Observable.Transformer<Location, Location>? = null): LocationRequestBuilder {
+    fun addLastLocation(provider: String, howOldCanBe: LocationTime? = null, isNullValid: Boolean = false, transformer: Observable.Transformer<Location?, Location?>? = null): LocationRequestBuilder {
         val o = rxLocationManager.getLastLocation(provider, howOldCanBe)
                 .filter { if (!isNullValid && it == null) false else true }
                 .onErrorResumeNext {
@@ -224,12 +200,12 @@ class LocationRequestBuilder internal constructor(private val rxLocationManager:
         return this
     }
 
-    fun create(): Observable<Location> {
+    fun create(): Observable<Location?> {
 
         var result = Observable.empty<Location>()
 
-        for (observable in observables) {
-            result = result.concatWith(observable.compose { it.onErrorResumeNext { if (returnDefaultLocationOnError) Observable.empty<Location>() else Observable.error<Location>(it) } })
+        observables.forEach {
+            result = result.concatWith(it.compose { it.onErrorResumeNext { if (returnDefaultLocationOnError) Observable.empty<Location>() else Observable.error<Location>(it) } })
         }
 
         return result.firstOrDefault(defaultLocation)
