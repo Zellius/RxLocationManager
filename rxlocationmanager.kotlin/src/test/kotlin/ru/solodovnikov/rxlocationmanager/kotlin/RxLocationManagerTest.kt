@@ -12,6 +12,8 @@ import org.mockito.Mockito
 import org.mockito.MockitoAnnotations
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import ru.solodovnikov.rxlocationmanager.core.ElderLocationException
+import ru.solodovnikov.rxlocationmanager.core.ProviderDisabledException
 import rx.observers.TestSubscriber
 import rx.schedulers.Schedulers
 import java.util.concurrent.TimeUnit

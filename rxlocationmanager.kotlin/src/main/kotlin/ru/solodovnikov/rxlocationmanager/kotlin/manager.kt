@@ -8,6 +8,8 @@ import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
+import ru.solodovnikov.rxlocationmanager.core.ElderLocationException
+import ru.solodovnikov.rxlocationmanager.core.ProviderDisabledException
 import rx.Emitter
 import rx.Observable
 import rx.Scheduler

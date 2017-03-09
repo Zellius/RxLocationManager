@@ -1,4 +1,4 @@
-apply plugin: 'com.android.application'
+apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 
 android {
@@ -6,11 +6,10 @@ android {
     buildToolsVersion "25.0.2"
 
     defaultConfig {
-        applicationId "ru.solodovnikov.rxlocationmanager.kotlin.sample"
-        minSdkVersion 14
+        minSdkVersion 9
         targetSdkVersion 25
-        versionCode 1
-        versionName "1.0"
+
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
         release {
@@ -20,17 +19,17 @@ android {
     }
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
+        test.java.srcDirs += 'src/test/kotlin'
+        androidTest.java.srcDirs += 'src/androidTest/kotlin'
     }
 }
 
-repositories {
-    mavenLocal()
-}
-
 dependencies {
-    compile fileTree(include: ['*.jar'], dir: 'libs')
-    testCompile 'junit:junit:4.12'
-    compile 'com.android.support:appcompat-v7:25.2.0'
+    compile fileTree(dir: 'libs', include: ['*.jar'])
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    compile "com.github.zellius:rxlocationmanager.kotlin:$library_version"
+
+    //for tests
+    testCompile 'junit:junit:4.12'
+    testCompile 'org.robolectric:robolectric:3.2.2'
+    testCompile 'org.mockito:mockito-core:2.7.13'
 }

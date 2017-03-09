@@ -1,6 +1,5 @@
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
-apply from: '../publish.gradle'
 
 android {
     compileSdkVersion 25
@@ -9,14 +8,14 @@ android {
     defaultConfig {
         minSdkVersion 9
         targetSdkVersion 25
+
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+
     }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-        }
-        debug {
-            testCoverageEnabled true
         }
     }
     sourceSets {
@@ -27,8 +26,8 @@ android {
 }
 
 dependencies {
-    compile fileTree(include: ['*.jar'], dir: 'libs')
-    compile 'io.reactivex:rxjava:1.2.7'
-    compile 'io.reactivex:rxandroid:1.2.1'
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile "io.reactivex.rxjava2:rxjava:2.0.7"
+    compile 'io.reactivex.rxjava2:rxjava:2.0.1'
     compile project(':core')
 }
