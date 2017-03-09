@@ -2,6 +2,8 @@
 apply plugin: 'com.github.kt3k.coveralls'
 apply plugin: 'jacoco'
 
+ext.library_version = '0.1.1'
+
 buildscript {
     ext.kotlin_version = '1.1.0'
 
@@ -11,10 +13,12 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:2.2.3'
-        classpath 'com.novoda:bintray-release:0.3.4'
+        classpath 'com.android.tools.build:gradle:2.3.0'
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7.3'
         classpath 'org.kt3k.gradle.plugin:coveralls-gradle-plugin:2.8.1'
+        classpath 'com.github.dcendents:android-maven-gradle-plugin:1.5'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath 'org.jetbrains.dokka:dokka-android-gradle-plugin:0.9.13'
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
@@ -26,35 +30,35 @@ allprojects {
         jcenter()
     }
 }
-subprojects {
-    if (!project.name.contains('sample')) {
-        apply plugin: 'jacoco'
-        apply plugin: 'com.android.library'
-
-        task jacocoTestReport(type: JacocoReport, dependsOn: "testDebugUnitTest") {
-            group = "Reporting"
-            description = "Generate Jacoco coverage reports"
-
-            classDirectories = fileTree(
-                    dir: "${project.buildDir}/intermediates/classes",
-                    excludes: ['**/R.class',
-                               '**/R$*.class',
-                               '**/*$ViewInjector*.*',
-                               '**/BuildConfig.*',
-                               '**/Manifest*.*']
-            )
-
-            additionalSourceDirs = files(project.android.sourceSets.main.java.srcDirs)
-            sourceDirectories = files(project.android.sourceSets.main.java.srcDirs)
-            executionData = files("${project.buildDir}/jacoco/testDebugUnitTest.exec")
-
-            reports {
-                xml.enabled = true
-                html.enabled = true
-            }
-        }
-    }
-}
+//subprojects {
+//    if (!project.name.contains('sample')) {
+//        apply plugin: 'jacoco'
+//        apply plugin: 'com.android.library'
+//
+//        task jacocoTestReport(type: JacocoReport, dependsOn: "testDebugUnitTest") {
+//            group = "Reporting"
+//            description = "Generate Jacoco coverage reports"
+//
+//            classDirectories = fileTree(
+//                    dir: "${project.buildDir}/intermediates/classes",
+//                    excludes: ['**/R.class',
+//                               '**/R$*.class',
+//                               '**/*$ViewInjector*.*',
+//                               '**/BuildConfig.*',
+//                               '**/Manifest*.*']
+//            )
+//
+//            additionalSourceDirs = files(project.android.sourceSets.main.java.srcDirs)
+//            sourceDirectories = files(project.android.sourceSets.main.java.srcDirs)
+//            executionData = files("${project.buildDir}/jacoco/testDebugUnitTest.exec")
+//
+//            reports {
+//                xml.enabled = true
+//                html.enabled = true
+//            }
+//        }
+//    }
+//}
 
 task clean(type: Delete) {
     delete rootProject.buildDir
@@ -64,21 +68,21 @@ def validSubprojects = subprojects.findAll {
     !it.name.contains('sample')
 }
 
-task jacocoRootReport(type: JacocoReport, group: 'Coverage reports', description: 'Generates an aggregate report from all subprojects') {
-    dependsOn = validSubprojects.jacocoTestReport
-
-    classDirectories = files(validSubprojects.jacocoTestReport.classDirectories)
-    additionalSourceDirs = files(validSubprojects.jacocoTestReport.additionalSourceDirs)
-    sourceDirectories = files(validSubprojects.jacocoTestReport.additionalSourceDirs)
-    executionData = files(validSubprojects.jacocoTestReport.executionData)
-
-    reports {
-        html.enabled = true // human readable
-        xml.enabled = true // required by coveralls
-    }
-}
-
-coveralls {
-    jacocoReportPath = "${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.xml"
-    sourceDirs = validSubprojects.android.sourceSets.main.java.srcDirs.flatten()
-}
+//task jacocoRootReport(type: JacocoReport, group: 'Coverage reports', description: 'Generates an aggregate report from all subprojects') {
+//    dependsOn = validSubprojects.jacocoTestReport
+//
+//    classDirectories = files(validSubprojects.jacocoTestReport.classDirectories)
+//    additionalSourceDirs = files(validSubprojects.jacocoTestReport.additionalSourceDirs)
+//    sourceDirectories = files(validSubprojects.jacocoTestReport.additionalSourceDirs)
+//    executionData = files(validSubprojects.jacocoTestReport.executionData)
+//
+//    reports {
+//        html.enabled = true // human readable
+//        xml.enabled = true // required by coveralls
+//    }
+//}
+//
+//coveralls {
+//    jacocoReportPath = "${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.xml"
+//    sourceDirs = validSubprojects.android.sourceSets.main.java.srcDirs.flatten()
+//}

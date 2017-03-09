@@ -19,9 +19,13 @@ android {
     }
 }
 
+repositories {
+    mavenLocal()
+}
+
 dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
     testCompile 'junit:junit:4.12'
     compile 'com.android.support:appcompat-v7:25.2.0'
-    compile 'com.github.zellius:rxlocationmanager.kotlin:0.1.0'
+    compile "com.github.zellius:rxlocationmanager.kotlin:0.1.1"
 }

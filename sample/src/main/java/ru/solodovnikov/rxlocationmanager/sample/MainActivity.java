@@ -8,7 +8,6 @@ import android.util.Log;
 
 import java.util.concurrent.TimeUnit;
 
-
 import ru.solodovnikov.rxlocationmanager.kotlin.LocationRequestBuilder;
 import ru.solodovnikov.rxlocationmanager.kotlin.LocationTime;
 import rx.Subscriber;
@@ -21,8 +20,8 @@ public class MainActivity extends Activity {
 
         final LocationRequestBuilder locationRequestBuilder = new LocationRequestBuilder(this);
 
-        locationRequestBuilder.addLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(30, TimeUnit.SECONDS), false, null)
-                .addRequestLocation(LocationManager.GPS_PROVIDER, new LocationTime(10, TimeUnit.SECONDS), null)
+        locationRequestBuilder.addLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(30, TimeUnit.SECONDS))
+                .addRequestLocation(LocationManager.GPS_PROVIDER, new LocationTime(10, TimeUnit.SECONDS))
                 .setDefaultLocation(new Location(LocationManager.PASSIVE_PROVIDER))
                 .create().subscribe(new Subscriber<Location>() {
             @Override

@@ -4,7 +4,6 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Build
-import android.os.Looper
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -21,8 +20,8 @@ import java.util.concurrent.TimeoutException
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = intArrayOf(Build.VERSION_CODES.JELLY_BEAN))
 class RxLocationManagerTest {
-    val networkProvider = LocationManager.NETWORK_PROVIDER
-    val scheduler = Schedulers.immediate()
+    private val networkProvider = LocationManager.NETWORK_PROVIDER
+    private val scheduler = Schedulers.immediate()
 
     @Mock
     lateinit var locationManager: LocationManager
@@ -81,14 +80,15 @@ class RxLocationManagerTest {
             val args = it.arguments
             val locationListener = args[1] as LocationListener
             locationListener.onLocationChanged(expectedLocation)
-            null
-        }.`when`(locationManager).requestSingleUpdate(Mockito.eq(networkProvider), Mockito.any(LocationListener::class.java), Mockito.any(Looper::class.java))
+            return@doAnswer null
+        }.`when`(locationManager).requestSingleUpdate(Mockito.eq(networkProvider), Mockito.any(), Mockito.any())
 
         val rxLocationManager = getDefaultRxLocationManager()
 
         val subscriber = TestSubscriber<Location>()
         rxLocationManager.requestLocation(networkProvider).subscribe(subscriber)
         subscriber.awaitTerminalEvent(30, TimeUnit.SECONDS)
+        subscriber.assertNoErrors()
         subscriber.assertCompleted()
         subscriber.assertValue(expectedLocation)
     }
@@ -197,8 +197,8 @@ class RxLocationManagerTest {
 
     private fun buildFakeLocation(provider: String = networkProvider): Location {
         val location = Location(provider)
-        location.setLatitude(50.0)
-        location.setLongitude(30.0)
+        location.latitude = 50.0
+        location.longitude = 30.0
 
         return location
     }
