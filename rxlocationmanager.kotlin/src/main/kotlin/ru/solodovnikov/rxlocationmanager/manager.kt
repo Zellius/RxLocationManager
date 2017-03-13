@@ -146,13 +146,10 @@ class LocationRequestBuilder internal constructor(private val rxLocationManager:
         val o = rxLocationManager.getLastLocation(provider, howOldCanBe)
                 .filter { if (!isNullValid && it == null) false else true }
                 .onErrorResumeNext {
-                    if (it is ElderLocationException) {
-                        return@onErrorResumeNext Observable.empty<Location>()
+                    when (it) {
+                        is ElderLocationException, is ProviderDisabledException -> return@onErrorResumeNext Observable.empty<Location>()
+                        else -> return@onErrorResumeNext Observable.error<Location>(it)
                     }
-                    if (it is ProviderDisabledException) {
-                        return@onErrorResumeNext Observable.empty<Location>()
-                    }
-                    Observable.error<Location>(it)
                 }
 
         observables.add(if (transformer != null) o.compose(transformer) else o)
