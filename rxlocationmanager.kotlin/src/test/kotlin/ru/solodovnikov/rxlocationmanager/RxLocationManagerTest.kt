@@ -12,7 +12,6 @@ import org.mockito.Mockito
 import org.mockito.MockitoAnnotations
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import ru.solodovnikov.rxlocationmanager.*
 import rx.observers.TestSubscriber
 import rx.schedulers.Schedulers
 import java.util.concurrent.TimeUnit

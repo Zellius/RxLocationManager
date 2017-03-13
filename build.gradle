@@ -30,6 +30,20 @@ allprojects {
         jcenter()
     }
 }
+
+subprojects {
+    afterEvaluate {
+        if (!project.name.contains('sample')) {
+            dependencies {
+                //for tests
+                testCompile 'junit:junit:4.12'
+                testCompile 'org.robolectric:robolectric:3.2.2'
+                testCompile 'org.mockito:mockito-core:2.7.13'
+            }
+        }
+    }
+}
+
 //subprojects {
 //    if (!project.name.contains('sample')) {
 //        apply plugin: 'jacoco'

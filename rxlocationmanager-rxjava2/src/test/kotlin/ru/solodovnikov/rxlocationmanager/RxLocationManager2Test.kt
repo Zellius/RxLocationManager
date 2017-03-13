@@ -5,7 +5,7 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Build
 import io.reactivex.observers.TestObserver
-import io.reactivex.schedulers.TestScheduler
+import io.reactivex.schedulers.Schedulers
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -14,9 +14,6 @@ import org.mockito.Mockito
 import org.mockito.MockitoAnnotations
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import ru.solodovnikov.rxlocationmanager.ElderLocationException
-import ru.solodovnikov.rxlocationmanager.LocationTime
-import ru.solodovnikov.rxlocationmanager.ProviderDisabledException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
@@ -24,7 +21,7 @@ import java.util.concurrent.TimeoutException
 @Config(sdk = intArrayOf(Build.VERSION_CODES.JELLY_BEAN))
 class RxLocationManager2Test {
     private val networkProvider = LocationManager.NETWORK_PROVIDER
-    private val scheduler = TestScheduler()
+    private val scheduler = Schedulers.trampoline()
 
     @Mock
     lateinit var locationManager: LocationManager
@@ -53,7 +50,7 @@ class RxLocationManager2Test {
     }
 
     /**
-     * Test that getLastLocation throw ElderLocationException if howOldCanBe is provided
+     * Test that getLastLocation throw [ElderLocationException] if howOldCanBe is provided
      *
      */
     @Test
@@ -69,6 +66,19 @@ class RxLocationManager2Test {
         rxLocationManager.getLastLocation(networkProvider, LocationTime(30, TimeUnit.MINUTES)).subscribe(subscriber)
         subscriber.awaitTerminalEvent()
         subscriber.assertError(ElderLocationException::class.java)
+    }
+
+    /**
+     * Test that getLastLocation throw [ProviderHasNoLastLocationException] if locationManager emit null
+     */
+    @Test
+    fun getLastLocation_NoLocation() {
+        Mockito.`when`(locationManager.getLastKnownLocation(networkProvider)).thenReturn(null)
+
+        val subscriber = TestObserver<Location>()
+        getDefaultRxLocationManager().getLastLocation(networkProvider).subscribe(subscriber)
+        subscriber.awaitTerminalEvent()
+        subscriber.assertError(ProviderHasNoLastLocationException::class.java)
     }
 
     @Test
@@ -130,13 +140,13 @@ class RxLocationManager2Test {
 
     @Test
     fun builder_Success() {
-        val location1 = buildFakeLocation()
+        val location = buildFakeLocation()
 
         val locationRequestBuilder = getDefaultLocationRequestBuilder()
 
-        val createdObservable = locationRequestBuilder.addLastLocation(provider = networkProvider, isNullValid = false)
+        val createdObservable = locationRequestBuilder.addLastLocation(provider = networkProvider)
                 .addRequestLocation(provider = networkProvider, timeOut = LocationTime(5, TimeUnit.SECONDS))
-                .setDefaultLocation(location1)
+                .setDefaultLocation(location)
                 .create()
 
         //set provider enabled
@@ -147,8 +157,9 @@ class RxLocationManager2Test {
         val subscriber = TestObserver<Location>()
         createdObservable.subscribe(subscriber)
         subscriber.awaitTerminalEvent()
+        subscriber.assertNoErrors()
         subscriber.assertComplete()
-        subscriber.assertValue(location1)
+        subscriber.assertValue(location)
     }
 
     /**
@@ -161,7 +172,7 @@ class RxLocationManager2Test {
 
         val locationRequestBuilder = getDefaultLocationRequestBuilder()
 
-        val createdObservable = locationRequestBuilder.addLastLocation(provider = networkProvider, howOldCanBe = LocationTime(10, TimeUnit.MINUTES), isNullValid = false)
+        val createdObservable = locationRequestBuilder.addLastLocation(provider = networkProvider, howOldCanBe = LocationTime(10, TimeUnit.MINUTES))
                 .addRequestLocation(provider = networkProvider, timeOut = LocationTime(5, TimeUnit.SECONDS))
                 .create()
 
