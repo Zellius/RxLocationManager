@@ -1,22 +1,15 @@
 package ru.solodovnikov.rxlocationmanager
 
-import android.annotation.TargetApi
 import android.content.Context
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
-import android.os.Build
 import android.os.Bundle
-import android.os.SystemClock
-import ru.solodovnikov.rxlocationmanager.ElderLocationException
-import ru.solodovnikov.rxlocationmanager.LocationTime
-import ru.solodovnikov.rxlocationmanager.ProviderDisabledException
 import rx.Emitter
 import rx.Observable
 import rx.Scheduler
 import rx.android.schedulers.AndroidSchedulers
 import rx.functions.Action1
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
 class RxLocationManager internal constructor(private val locationManager: LocationManager,
@@ -37,7 +30,7 @@ class RxLocationManager internal constructor(private val locationManager: Locati
             Observable.fromCallable { locationManager.getLastKnownLocation(provider) }
                     .compose {
                         if (howOldCanBe == null) it else it.map {
-                            if (it != null && !isLocationNotOld(it, howOldCanBe)) {
+                            if (it != null && !it.isNotOld(howOldCanBe)) {
                                 throw ElderLocationException(it)
                             }
 
@@ -65,21 +58,6 @@ class RxLocationManager internal constructor(private val locationManager: Locati
                     .compose(applySchedulers())
 
     private fun applySchedulers() = Observable.Transformer<Location?, Location?> { it.subscribeOn(scheduler).observeOn(scheduler) }
-
-    private fun isLocationNotOld(location: Location, howOldCanBe: LocationTime) =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-                isLocationNotOld17(location, howOldCanBe)
-            } else {
-                isLocationNotOldDefault(location, howOldCanBe)
-            }
-
-    @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR1)
-    private fun isLocationNotOld17(location: Location, howOldCanBe: LocationTime) =
-            SystemClock.elapsedRealtimeNanos() - location.elapsedRealtimeNanos < howOldCanBe.timeUnit.toNanos(howOldCanBe.time)
-
-    private fun isLocationNotOldDefault(location: Location, howOldCanBe: LocationTime) =
-            System.currentTimeMillis() - location.time < howOldCanBe.timeUnit.toMillis(howOldCanBe.time)
-
 
     private class RxLocationListener(val locationManager: LocationManager, val provider: String, val throwExceptionIfDisabled: Boolean) : Action1<Emitter<Location>> {
 

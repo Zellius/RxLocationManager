@@ -1,13 +1,10 @@
 package ru.solodovnikov.rxlocationmanager
 
-import android.annotation.TargetApi
 import android.content.Context
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
-import android.os.Build
 import android.os.Bundle
-import android.os.SystemClock
 import io.reactivex.*
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.functions.Function
@@ -32,7 +29,7 @@ class RxLocationManager internal constructor(private val locationManager: Locati
             Single.fromCallable { locationManager.getLastKnownLocation(provider) ?: throw ProviderHasNoLastLocationException(provider) }
                     .compose {
                         if (howOldCanBe == null) it else it.map {
-                            if (!isLocationNotOld(it, howOldCanBe)) {
+                            if (!it.isNotOld(howOldCanBe)) {
                                 throw ElderLocationException(it)
                             }
                             it
@@ -55,20 +52,6 @@ class RxLocationManager internal constructor(private val locationManager: Locati
             Single.create(RxLocationListener(locationManager, provider))
                     .compose { if (timeOut != null) it.timeout(timeOut.time, timeOut.timeUnit) else it }
                     .compose(applySchedulers())
-
-    private fun isLocationNotOld(location: Location, howOldCanBe: LocationTime) =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-                isLocationNotOld17(location, howOldCanBe)
-            } else {
-                isLocationNotOldDefault(location, howOldCanBe)
-            }
-
-    @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR1)
-    private fun isLocationNotOld17(location: Location, howOldCanBe: LocationTime) =
-            SystemClock.elapsedRealtimeNanos() - location.elapsedRealtimeNanos < howOldCanBe.timeUnit.toNanos(howOldCanBe.time)
-
-    private fun isLocationNotOldDefault(location: Location, howOldCanBe: LocationTime) =
-            System.currentTimeMillis() - location.time < howOldCanBe.timeUnit.toMillis(howOldCanBe.time)
 
     private fun applySchedulers() = SingleTransformer<Location, Location> { it.subscribeOn(scheduler).observeOn(scheduler) }
 
