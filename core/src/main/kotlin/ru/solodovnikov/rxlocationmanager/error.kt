@@ -1,4 +1,4 @@
-package ru.solodovnikov.rxlocationmanager.core
+package ru.solodovnikov.rxlocationmanager
 
 import android.location.Location
 

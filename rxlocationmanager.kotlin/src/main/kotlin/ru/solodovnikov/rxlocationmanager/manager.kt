@@ -1,4 +1,4 @@
-package ru.solodovnikov.rxlocationmanager.kotlin
+package ru.solodovnikov.rxlocationmanager
 
 import android.annotation.TargetApi
 import android.content.Context
@@ -8,8 +8,9 @@ import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
-import ru.solodovnikov.rxlocationmanager.core.ElderLocationException
-import ru.solodovnikov.rxlocationmanager.core.ProviderDisabledException
+import ru.solodovnikov.rxlocationmanager.ElderLocationException
+import ru.solodovnikov.rxlocationmanager.LocationTime
+import ru.solodovnikov.rxlocationmanager.ProviderDisabledException
 import rx.Emitter
 import rx.Observable
 import rx.Scheduler
@@ -115,16 +116,6 @@ class RxLocationManager internal constructor(private val locationManager: Locati
                 if (throwExceptionIfDisabled) emitter.onError(ProviderDisabledException(provider)) else emitter.onCompleted()
             }
         }
-    }
-}
-
-
-data class LocationTime(val time: Long, val timeUnit: TimeUnit) {
-    companion object {
-        @JvmField
-        val ONE_DAY = LocationTime(1L, TimeUnit.DAYS)
-        @JvmField
-        val ONE_HOUR = LocationTime(1L, TimeUnit.HOURS)
     }
 }
 
