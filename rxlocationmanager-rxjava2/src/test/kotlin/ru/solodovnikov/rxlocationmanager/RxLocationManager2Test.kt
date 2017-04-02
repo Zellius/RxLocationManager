@@ -4,7 +4,6 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Build
-import io.reactivex.observers.TestObserver
 import io.reactivex.schedulers.Schedulers
 import org.junit.Before
 import org.junit.Test
@@ -42,11 +41,12 @@ class RxLocationManager2Test {
 
         val rxLocationManager = RxLocationManager(locationManager, scheduler)
 
-        val subscriber = TestObserver<Location>()
-        rxLocationManager.getLastLocation(networkProvider).subscribe(subscriber)
-        subscriber.awaitTerminalEvent()
-        subscriber.assertComplete()
-        subscriber.assertValue(expectedLocation)
+        rxLocationManager.getLastLocation(networkProvider)
+                .test()
+                .await()
+                .assertNoErrors()
+                .assertComplete()
+                .assertValue(expectedLocation)
     }
 
     /**
@@ -62,10 +62,10 @@ class RxLocationManager2Test {
 
         val rxLocationManager = getDefaultRxLocationManager()
 
-        val subscriber = TestObserver<Location>()
-        rxLocationManager.getLastLocation(networkProvider, LocationTime(30, TimeUnit.MINUTES)).subscribe(subscriber)
-        subscriber.awaitTerminalEvent()
-        subscriber.assertError(ElderLocationException::class.java)
+        rxLocationManager.getLastLocation(networkProvider, LocationTime(30, TimeUnit.MINUTES))
+                .test()
+                .await()
+                .assertError(ElderLocationException::class.java)
     }
 
     /**
@@ -75,10 +75,12 @@ class RxLocationManager2Test {
     fun getLastLocation_NoLocation() {
         Mockito.`when`(locationManager.getLastKnownLocation(networkProvider)).thenReturn(null)
 
-        val subscriber = TestObserver<Location>()
-        getDefaultRxLocationManager().getLastLocation(networkProvider).subscribe(subscriber)
-        subscriber.awaitTerminalEvent()
-        subscriber.assertError(ProviderHasNoLastLocationException::class.java)
+        getDefaultRxLocationManager().getLastLocation(networkProvider)
+                .test()
+                .await()
+                .assertNoErrors()
+                .assertComplete()
+                .assertNoValues()
     }
 
     @Test
@@ -98,12 +100,12 @@ class RxLocationManager2Test {
 
         val rxLocationManager = getDefaultRxLocationManager()
 
-        val subscriber = TestObserver<Location>()
-        rxLocationManager.requestLocation(networkProvider).subscribe(subscriber)
-        subscriber.awaitTerminalEvent(30, TimeUnit.SECONDS)
-        subscriber.assertNoErrors()
-        subscriber.assertComplete()
-        subscriber.assertValue(expectedLocation)
+        rxLocationManager.requestLocation(networkProvider)
+                .test()
+                .await()
+                .assertNoErrors()
+                .assertComplete()
+                .assertValue(expectedLocation)
     }
 
     /**
@@ -116,10 +118,10 @@ class RxLocationManager2Test {
 
         val rxLocationManager = getDefaultRxLocationManager()
 
-        val subscriber = TestObserver<Location>()
-        rxLocationManager.requestLocation(networkProvider).subscribe(subscriber)
-        subscriber.awaitTerminalEvent()
-        subscriber.assertError(ProviderDisabledException::class.java)
+        rxLocationManager.requestLocation(networkProvider)
+                .test()
+                .await()
+                .assertError(ProviderDisabledException::class.java)
     }
 
     /**
@@ -132,10 +134,10 @@ class RxLocationManager2Test {
 
         val rxLocationManager = getDefaultRxLocationManager()
 
-        val subscriber = TestObserver<Location>()
-        rxLocationManager.requestLocation(networkProvider, LocationTime(5, TimeUnit.SECONDS)).subscribe(subscriber)
-        subscriber.awaitTerminalEvent()
-        subscriber.assertError(TimeoutException::class.java)
+        rxLocationManager.requestLocation(networkProvider, LocationTime(5, TimeUnit.SECONDS))
+                .test()
+                .await()
+                .assertError(TimeoutException::class.java)
     }
 
     @Test
@@ -154,12 +156,11 @@ class RxLocationManager2Test {
 
         Mockito.`when`(locationManager.getLastKnownLocation(networkProvider)).thenReturn(null)
 
-        val subscriber = TestObserver<Location>()
-        createdObservable.subscribe(subscriber)
-        subscriber.awaitTerminalEvent()
-        subscriber.assertNoErrors()
-        subscriber.assertComplete()
-        subscriber.assertValue(location)
+        createdObservable.test()
+                .await()
+                .assertNoErrors()
+                .assertComplete()
+                .assertValue(location)
     }
 
     /**
@@ -181,10 +182,9 @@ class RxLocationManager2Test {
 
         Mockito.`when`(locationManager.getLastKnownLocation(networkProvider)).thenReturn(location1)
 
-        val subscriber = TestObserver<Location>()
-        createdObservable.subscribe(subscriber)
-        subscriber.awaitTerminalEvent()
-        subscriber.assertNoValues()
+        createdObservable.test()
+                .await()
+                .assertNoValues()
     }
 
     @Test
@@ -195,10 +195,9 @@ class RxLocationManager2Test {
 
         val createdObservable = locationRequestBuilder.setDefaultLocation(location1).create()
 
-        val subscriber = TestObserver<Location>()
-        createdObservable.subscribe(subscriber)
-        subscriber.awaitTerminalEvent()
-        subscriber.assertValue(location1)
+        createdObservable.test()
+                .await()
+                .assertValue(location1)
     }
 
     private fun setIsProviderEnabled(provider: String = networkProvider, isEnabled: Boolean = false) {

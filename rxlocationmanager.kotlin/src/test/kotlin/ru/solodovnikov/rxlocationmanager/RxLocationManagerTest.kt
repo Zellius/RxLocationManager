@@ -131,7 +131,7 @@ class RxLocationManagerTest {
 
         val locationRequestBuilder = getDefaultLocationRequestBuilder()
 
-        val createdObservable = locationRequestBuilder.addLastLocation(provider = networkProvider, isNullValid = false)
+        val createdObservable = locationRequestBuilder.addLastLocation(provider = networkProvider)
                 .addRequestLocation(provider = networkProvider, timeOut = LocationTime(5, TimeUnit.SECONDS))
                 .setDefaultLocation(location1)
                 .create()
@@ -158,7 +158,7 @@ class RxLocationManagerTest {
 
         val locationRequestBuilder = getDefaultLocationRequestBuilder()
 
-        val createdObservable = locationRequestBuilder.addLastLocation(provider = networkProvider, howOldCanBe = LocationTime(10, TimeUnit.MINUTES), isNullValid = false)
+        val createdObservable = locationRequestBuilder.addLastLocation(provider = networkProvider, howOldCanBe = LocationTime(10, TimeUnit.MINUTES))
                 .addRequestLocation(provider = networkProvider, timeOut = LocationTime(5, TimeUnit.SECONDS))
                 .create()
 

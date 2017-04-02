@@ -10,50 +10,32 @@ import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.functions.Function
 import java.util.concurrent.TimeoutException
 
-class RxLocationManager internal constructor(private val locationManager: LocationManager,
-                                             private val scheduler: Scheduler = AndroidSchedulers.mainThread()) {
+class RxLocationManager internal constructor(locationManager: LocationManager,
+                                             private val scheduler: Scheduler = AndroidSchedulers.mainThread()) : BaseRxLocationManager<Single<Location>, Maybe<Location>>(locationManager) {
     constructor(context: Context) : this(context.getSystemService(Context.LOCATION_SERVICE) as LocationManager)
 
-    /**
-     * Get last location from specific provider
-     * Observable will emit [ElderLocationException] if [howOldCanBe] is not null and location time is not valid.
-     *
-     * @param provider provider name
-     * @param howOldCanBe how old a location can be
-     * @return observable that emit last known location. May emit null
-     * @see ElderLocationException
-     * @see ProviderHasNoLastLocationException
-     */
-    @JvmOverloads
-    fun getLastLocation(provider: String, howOldCanBe: LocationTime? = null): Single<Location> =
-            Single.fromCallable { locationManager.getLastKnownLocation(provider) ?: throw ProviderHasNoLastLocationException(provider) }
+
+    override fun baseGetLastLocation(provider: String, howOldCanBe: LocationTime?): Maybe<Location> =
+            Maybe.fromCallable { locationManager.getLastKnownLocation(provider) ?: throw ProviderHasNoLastLocationException(provider) }
+                    .onErrorComplete { it is ProviderHasNoLastLocationException }
                     .compose {
                         if (howOldCanBe == null) it else it.map {
                             if (!it.isNotOld(howOldCanBe)) {
                                 throw ElderLocationException(it)
                             }
                             it
-                        }
-                    }.compose(applySchedulers())
 
-    /**
-     * Try to get current location by specific provider.
-     * Observable will emit [TimeoutException] in case of timeOut if [timeOut] object is not null.
-     * Observable will emit [ProviderDisabledException] if provider is disabled
-     *
-     * @param provider provider name
-     * @param timeOut  optional request timeout
-     * @return observable that emit current location
-     * @see TimeoutException
-     * @see ProviderDisabledException
-     */
-    @JvmOverloads
-    fun requestLocation(provider: String, timeOut: LocationTime? = null): Single<Location> =
+                        }
+                    }.compose { applySchedulers(it) }
+
+    override fun baseRequestLocation(provider: String, timeOut: LocationTime?): Single<Location> =
             Single.create(RxLocationListener(locationManager, provider))
                     .compose { if (timeOut != null) it.timeout(timeOut.time, timeOut.timeUnit) else it }
-                    .compose(applySchedulers())
+                    .compose { applySchedulers(it) }
 
-    private fun applySchedulers() = SingleTransformer<Location, Location> { it.subscribeOn(scheduler).observeOn(scheduler) }
+    private fun applySchedulers(s: Single<Location>) = s.subscribeOn(scheduler).observeOn(scheduler)
+
+    private fun applySchedulers(m: Maybe<Location>) = m.subscribeOn(scheduler).observeOn(scheduler)
 
     private class RxLocationListener(val locationManager: LocationManager, val provider: String) : SingleOnSubscribe<Location> {
 
@@ -64,19 +46,15 @@ class RxLocationManager internal constructor(private val locationManager: Locati
                         emitter.onSuccess(location)
                     }
 
-                    override fun onProviderDisabled(p0: String?) {
-
-                    }
-
-                    override fun onStatusChanged(p0: String?, p1: Int, p2: Bundle?) {
-
-                    }
-
-                    override fun onProviderEnabled(p: String?) {
+                    override fun onProviderDisabled(p: String?) {
                         if (provider == p) {
                             emitter.onError(ProviderDisabledException(provider))
                         }
                     }
+
+                    override fun onStatusChanged(p0: String?, p1: Int, p2: Bundle?) {}
+
+                    override fun onProviderEnabled(p: String?) {}
                 }
 
                 locationManager.requestSingleUpdate(provider, locationListener, null)
@@ -90,26 +68,14 @@ class RxLocationManager internal constructor(private val locationManager: Locati
     }
 }
 
-class LocationRequestBuilder internal constructor(private val rxLocationManager: RxLocationManager,
-                                                  private val scheduler: Scheduler = AndroidSchedulers.mainThread()) {
-    private var defaultLocation: Location? = null
-    private var returnDefaultLocationOnError = false
+class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationManager,
+                                                  private val scheduler: Scheduler = AndroidSchedulers.mainThread()) : BaseLocationRequestBuilder<Single<Location>, Maybe<Location>, ObservableTransformer<Location, Location>>(rxLocationManager) {
     private val observables: MutableList<Observable<Location>> = arrayListOf()
 
     constructor(context: Context) : this(RxLocationManager(context))
 
-    /**
-     * Try to get current location by specific [provider]
-     *
-     * @param provider    provider name
-     * @param timeOut     optional request timeout
-     * @param transformer optional extra transformer
-     *
-     * @return same builder
-     */
-    @JvmOverloads
-    fun addRequestLocation(provider: String, timeOut: LocationTime? = null,
-                           transformer: ObservableTransformer<Location, Location>? = null): LocationRequestBuilder {
+    override fun baseAddRequestLocation(provider: String, timeOut: LocationTime?,
+                                        transformer: ObservableTransformer<Location, Location>?): BaseLocationRequestBuilder<Single<Location>, Maybe<Location>, ObservableTransformer<Location, Location>> {
         val o = rxLocationManager.requestLocation(provider, timeOut)
                 .toObservable()
                 .onErrorResumeNext(Function {
@@ -124,23 +90,13 @@ class LocationRequestBuilder internal constructor(private val rxLocationManager:
         return this
     }
 
-    /**
-     * Get last location from specific [provider]
-     *
-     * @param provider    provider name
-     * @param howOldCanBe optional. How old a location can be
-     * @param isNullValid if true, null will be emitted
-     * @param transformer optional extra transformer
-     * @return same builder
-     */
-    @JvmOverloads
-    fun addLastLocation(provider: String, howOldCanBe: LocationTime? = null,
-                        transformer: ObservableTransformer<Location, Location>? = null): LocationRequestBuilder {
+    override fun baseAddLastLocation(provider: String, howOldCanBe: LocationTime?,
+                                     transformer: ObservableTransformer<Location, Location>?): BaseLocationRequestBuilder<Single<Location>, Maybe<Location>, ObservableTransformer<Location, Location>> {
         val o = rxLocationManager.getLastLocation(provider, howOldCanBe)
                 .toObservable()
                 .onErrorResumeNext(Function {
                     when (it) {
-                        is ElderLocationException, is ProviderDisabledException, is ProviderHasNoLastLocationException -> Observable.empty<Location>()
+                        is ElderLocationException -> Observable.empty<Location>()
                         else -> Observable.error<Location>(it)
                     }
                 })
@@ -150,39 +106,18 @@ class LocationRequestBuilder internal constructor(private val rxLocationManager:
         return this
     }
 
-    /**
-     * Set location that will be returned in case of empty observable
-     *
-     * @param defaultLocation default location
-     * @return same builder
-     */
-    fun setDefaultLocation(defaultLocation: Location?): LocationRequestBuilder {
-        this.defaultLocation = defaultLocation
-        return this
-    }
-
-    /**
-     * If [returnDefaultLocationOnError] is true, result observable will emit default location if any exception occur
-     *
-     * @param returnDefaultLocationOnError emit default location if any exception occur?
-     * @return same builder
-     */
-    fun setReturnDefaultLocationOnError(returnDefaultLocationOnError: Boolean): LocationRequestBuilder {
-        this.returnDefaultLocationOnError = returnDefaultLocationOnError
-        return this
-    }
-
-    fun create(): Maybe<Location> {
+    override fun create(): Maybe<Location> {
 
         var result = Observable.empty<Location>()
 
         observables.forEach {
             result = result.concatWith(it.compose {
                 it.onErrorResumeNext(Function {
-                    if (returnDefaultLocationOnError)
+                    if (returnDefaultLocationOnError) {
                         Observable.empty<Location>()
-                    else
+                    } else {
                         Observable.error<Location>(it)
+                    }
                 })
             })
         }

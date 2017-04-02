@@ -5,7 +5,7 @@ apply plugin: 'jacoco'
 ext.library_version = '0.1.1'
 
 buildscript {
-    ext.kotlin_version = '1.1.0'
+    ext.kotlin_version = '1.1.1'
 
     repositories {
         jcenter()
@@ -31,17 +31,85 @@ allprojects {
     }
 }
 
-subprojects {
-    afterEvaluate {
-        if (!project.name.contains('sample')) {
-            dependencies {
-                //for tests
-                testCompile 'junit:junit:4.12'
-                testCompile 'org.robolectric:robolectric:3.2.2'
-                testCompile 'org.mockito:mockito-core:2.7.13'
+def baseConfigure = { Project project ->
+    project.apply plugin: 'com.android.library'
+    project.apply plugin: 'kotlin-android'
+
+    project.android {
+        compileSdkVersion 25
+        buildToolsVersion "25.0.2"
+
+        defaultConfig {
+            minSdkVersion 9
+            targetSdkVersion 25
+
+            testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        }
+        buildTypes {
+            release {
+                minifyEnabled false
+                proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             }
         }
+        sourceSets {
+            main.java.srcDirs += 'src/main/kotlin'
+            test.java.srcDirs += 'src/test/kotlin'
+            androidTest.java.srcDirs += 'src/androidTest/kotlin'
+        }
     }
+
+    project.dependencies {
+        compile fileTree(dir: 'libs', include: ['*.jar'])
+        compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+
+        //for tests
+        testCompile 'junit:junit:4.12'
+        testCompile 'org.robolectric:robolectric:3.2.2'
+        testCompile 'org.mockito:mockito-core:2.7.13'
+    }
+}
+
+//copy core classes to the project gen folder
+def includeCoreClasses = { Project p ->
+    p.android.libraryVariants.all { var ->
+        def outputDir = p.file("$p.buildDir/generated/core/${var.dirName}")
+        def mergeTask = p.tasks.create(name: "merge${var.name.capitalize()}CoreClasses", type: Copy) {
+            from(project(':core').android.sourceSets.main.java.srcDirs)
+            into outputDir
+        }
+        var.registerJavaGeneratingTask(mergeTask, outputDir)
+    }
+}
+
+project(':core') {
+    baseConfigure(it)
+}
+
+project(':rxlocationmanager-rxjava2') {
+    baseConfigure(it)
+
+    apply from: '../publish.gradle'
+
+    dependencies {
+        compile 'io.reactivex.rxjava2:rxjava:2.0.8'
+        compile 'io.reactivex.rxjava2:rxandroid:2.0.1'
+    }
+
+    includeCoreClasses(it)
+}
+
+
+project(':rxlocationmanager.kotlin') {
+    baseConfigure(it)
+
+    apply from: '../publish.gradle'
+
+    dependencies {
+        compile 'io.reactivex:rxjava:1.2.9'
+        compile 'io.reactivex:rxandroid:1.2.1'
+    }
+
+    includeCoreClasses(it)
 }
 
 //subprojects {
