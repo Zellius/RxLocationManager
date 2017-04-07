@@ -50,29 +50,45 @@ locationRequestBuilder.addLastLocation(LocationManager.NETWORK_PROVIDER, new Loc
                 .create().subscribe();
 ```
 > **Note:** For default the LocationRequestBuilder will emit a default location in case of any exceptions. If you want to receive any exceptions you should use 
->```java
+```java
 locationRequestBuilder.setReturnDefaultLocationOnError(false)
 ```
 
 Download
 -----------------
+**Java**
+
+Maven:
+
 ```xml
 <dependency>
   <groupId>com.github.zellius</groupId>
   <artifactId>rxlocationmanager</artifactId>
-  <version>0.1.1</version>
-  <type>pom</type>
+  <version>0.1.2</version>
 </dependency>
 ```
-#####Gradle
 
-######Java
+Gradle:
+
 ```gradle
-compile 'com.github.zellius:rxlocationmanager:0.1.1'
+compile 'com.github.zellius:rxlocationmanager:0.1.2'
 ```
-######Kotlin
+**Kotlin**
+
+Maven:
+
+```xml
+<dependency>
+  <groupId>com.github.zellius</groupId>
+  <artifactId>rxlocationmanager.kotlin</artifactId>
+  <version>0.1.1</version>
+</dependency>
+```
+
+Gradle:
+
 ```gradle
-compile 'com.github.zellius:rxlocationmanager.kotlin:0.1.0'
+compile 'com.github.zellius:rxlocationmanager.kotlin:0.1.1'
 ```
 
 ## License
