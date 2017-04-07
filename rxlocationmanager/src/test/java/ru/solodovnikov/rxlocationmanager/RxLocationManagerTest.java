@@ -100,13 +100,14 @@ public class RxLocationManagerTest {
                 return null;
             }
         }).when(locationManager)
-                .requestSingleUpdate(Mockito.eq(provider), Mockito.any(LocationListener.class), Mockito.any(Looper.class));
+                .requestSingleUpdate(Mockito.eq(provider), Mockito.any(LocationListener.class), (Looper) Mockito.isNull());
 
         final RxLocationManager rxLocationManager = getDefaullRxLocationManager();
 
         final TestSubscriber<Location> subscriber = new TestSubscriber<>();
         rxLocationManager.requestLocation(provider).subscribe(subscriber);
-        subscriber.awaitTerminalEvent();
+        subscriber.awaitTerminalEvent(10, TimeUnit.SECONDS);
+        subscriber.assertNoErrors();
         subscriber.assertCompleted();
         subscriber.assertValue(expectedLocation);
     }

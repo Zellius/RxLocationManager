@@ -16,11 +16,12 @@ import java.util.concurrent.TimeoutException;
 
 import ru.solodovnikov.rxlocationmanager.error.ElderLocationException;
 import ru.solodovnikov.rxlocationmanager.error.ProviderDisabledException;
+import rx.Emitter;
 import rx.Observable;
 import rx.Scheduler;
-import rx.Subscriber;
-import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
+import rx.functions.Action1;
+import rx.functions.Cancellable;
 import rx.functions.Func1;
 
 
@@ -120,7 +121,7 @@ public class RxLocationManager {
 
         final RxLocationListener locationListener = new RxLocationListener(locationManager, provider, throwExceptionIfDisabled);
 
-        return Observable.create(locationListener)
+        return Observable.create(locationListener, Emitter.BackpressureMode.NONE)
                 .compose(new Observable.Transformer<Location, Location>() {
                     @Override
                     public Observable<Location> call(Observable<Location> locationObservable) {
@@ -157,13 +158,11 @@ public class RxLocationManager {
         return System.currentTimeMillis() - location.getTime() < howOldCanBe.getTimeUnit().toMillis(howOldCanBe.getValue());
     }
 
-    private static class RxLocationListener implements Observable.OnSubscribe<Location> {
+    private static class RxLocationListener implements Action1<Emitter<Location>> {
 
         private final LocationManager locationManager;
         private final String provider;
         private final boolean throwExceptionIfDisabled;
-
-        private LocationListener locationListener;
 
         public RxLocationListener(LocationManager locationManager, String provider, boolean throwExceptionIfDisabled) {
             this.locationManager = locationManager;
@@ -172,70 +171,53 @@ public class RxLocationManager {
         }
 
         @Override
-        public void call(final Subscriber<? super Location> subscriber) {
+        public void call(final Emitter<Location> locationEmitter) {
             if (locationManager.isProviderEnabled(provider)) {
-                locationListener = new LocationListener() {
+                final LocationListener locationListener = new LocationListener() {
                     @Override
                     public void onLocationChanged(Location location) {
-                        if (subscriber != null && !subscriber.isUnsubscribed()) {
-                            subscriber.onNext(location);
-                            subscriber.onCompleted();
-                        }
+                        locationEmitter.onNext(location);
+                        locationEmitter.onCompleted();
                     }
 
                     @Override
                     public void onStatusChanged(String provider, int status, Bundle extras) {
-
                     }
 
                     @Override
                     public void onProviderEnabled(String provider) {
-
                     }
 
                     @Override
                     public void onProviderDisabled(String provider) {
                         if (RxLocationListener.this.provider.equals(provider)) {
-                            subscriber.onError(new ProviderDisabledException(provider));
+                            locationEmitter.onError(new ProviderDisabledException(provider));
                         }
                     }
                 };
+
                 try {
                     locationManager.requestSingleUpdate(provider, locationListener, null);
                 } catch (SecurityException ex) {
                     throw ex;
                 }
-                subscriber.add(new Subscription() {
+
+                locationEmitter.setCancellation(new Cancellable() {
                     @Override
-                    public void unsubscribe() {
-                        if (!subscriber.isUnsubscribed()) {
-                            subscriber.unsubscribe();
+                    public void cancel() throws Exception {
+                        try {
+                            locationManager.removeUpdates(locationListener);
+                        } catch (SecurityException ex) {
+                            throw ex;
                         }
-
-                        removeUpdates();
-                    }
-
-                    @Override
-                    public boolean isUnsubscribed() {
-                        return subscriber.isUnsubscribed();
                     }
                 });
             } else {
 
                 if (throwExceptionIfDisabled) {
-                    subscriber.onError(new ProviderDisabledException(provider));
+                    locationEmitter.onError(new ProviderDisabledException(provider));
                 } else {
-                    subscriber.onCompleted();
-                }
-            }
-        }
-
-        void removeUpdates() {
-            if (locationListener != null) {
-                try {
-                    locationManager.removeUpdates(locationListener);
-                } catch (SecurityException ex) {
-                    throw ex;
+                    locationEmitter.onCompleted();
                 }
             }
         }
