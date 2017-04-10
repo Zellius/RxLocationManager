@@ -8,11 +8,11 @@ import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
+import rx.Emitter
 import rx.Observable
 import rx.Scheduler
-import rx.Subscriber
-import rx.Subscription
 import rx.android.schedulers.AndroidSchedulers
+import rx.functions.Action1
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
@@ -29,22 +29,16 @@ class RxLocationManager internal constructor(private val locationManager: Locati
      * @see ElderLocationException
      */
     fun getLastLocation(provider: String, howOldCanBe: LocationTime? = null) =
-            Observable.create<Location> {
-                try {
-                    it.onNext(locationManager.getLastKnownLocation(provider))
-                    it.onCompleted()
-                } catch(ex: SecurityException) {
-                    it.onError(ex)
-                }
-            }.compose {
-                if (howOldCanBe == null) it else it.map {
-                    if (it != null && !isLocationNotOld(it, howOldCanBe)) {
-                        throw ElderLocationException(it)
-                    }
+            Observable.fromCallable<Location> { locationManager.getLastKnownLocation(provider) }
+                    .compose {
+                        if (howOldCanBe == null) it else it.map {
+                            if (it != null && !isLocationNotOld(it, howOldCanBe)) {
+                                throw ElderLocationException(it)
+                            }
 
-                    it
-                }
-            }.compose(applySchedulers())
+                            it
+                        }
+                    }.compose(applySchedulers())
 
     /**
      * Try to get current location by specific provider.
@@ -57,10 +51,11 @@ class RxLocationManager internal constructor(private val locationManager: Locati
      * @see TimeoutException
      * @see ProviderDisabledException
      */
-    fun requestLocation(provider: String, timeOut: LocationTime? = null) = requestLocation(provider, timeOut, true)
+    fun requestLocation(provider: String, timeOut: LocationTime? = null): Observable<Location>
+            = requestLocation(provider, timeOut, true)
 
     internal fun requestLocation(provider: String, timeOut: LocationTime?, throwExceptionIfDisabled: Boolean) =
-            Observable.create(RxLocationListener(locationManager, provider, throwExceptionIfDisabled))
+            Observable.create(RxLocationListener(locationManager, provider, throwExceptionIfDisabled), Emitter.BackpressureMode.NONE)
                     .compose { if (timeOut != null) it.timeout(timeOut.time, timeOut.timeUnit) else it }
                     .compose(applySchedulers())
 
@@ -81,63 +76,35 @@ class RxLocationManager internal constructor(private val locationManager: Locati
             System.currentTimeMillis() - location.time < howOldCanBe.timeUnit.toMillis(howOldCanBe.time)
 
 
-    private class RxLocationListener(val locationManager: LocationManager, val provider: String, val throwExceptionIfDisabled: Boolean) : Observable.OnSubscribe<Location> {
-        var locationListener: LocationListener? = null
+    private class RxLocationListener(val locationManager: LocationManager,
+                                     val provider: String,
+                                     val throwExceptionIfDisabled: Boolean) : Action1<Emitter<Location>> {
 
-        override fun call(subscriber: Subscriber<in Location>?) {
+        override fun call(locationEmitter: Emitter<Location>) {
             if (locationManager.isProviderEnabled(provider)) {
-                locationListener = object : LocationListener {
+                val locationListener = object : LocationListener {
                     override fun onLocationChanged(location: Location?) {
-                        if (subscriber != null && !subscriber.isUnsubscribed) {
-                            subscriber.onNext(location)
-                            subscriber.onCompleted()
-                        }
+                        locationEmitter.onNext(location)
+                        locationEmitter.onCompleted()
                     }
 
-                    override fun onProviderDisabled(p0: String?) {
+                    override fun onProviderDisabled(p0: String?) {}
 
-                    }
-
-                    override fun onStatusChanged(p0: String?, p1: Int, p2: Bundle?) {
-
-                    }
+                    override fun onStatusChanged(p0: String?, p1: Int, p2: Bundle?) {}
 
                     override fun onProviderEnabled(p0: String?) {
-                        if (provider.equals(p0)) {
-                            subscriber!!.onError(ProviderDisabledException(provider))
+                        if (provider == p0) {
+                            locationEmitter.onError(ProviderDisabledException(provider))
                         }
                     }
                 }
 
-                try {
-                    locationManager.requestSingleUpdate(provider, locationListener, null)
-                } catch (ex: SecurityException) {
-                    subscriber!!.onError(ex)
-                }
+                locationManager.requestSingleUpdate(provider, locationListener, null)
 
-                subscriber!!.add(object : Subscription {
-                    override fun isUnsubscribed() = subscriber.isUnsubscribed
+                locationEmitter.setCancellation({ locationManager.removeUpdates(locationListener) })
 
-                    override fun unsubscribe() {
-                        if (!subscriber.isUnsubscribed) {
-                            subscriber.unsubscribe()
-                        }
-
-                        try {
-                            removeUpdates()
-                        } catch(ex: SecurityException) {
-                            subscriber.onError(ex)
-                        }
-                    }
-                })
             } else {
-                if (throwExceptionIfDisabled) subscriber!!.onError(ProviderDisabledException(provider)) else subscriber!!.onCompleted()
-            }
-        }
-
-        private fun removeUpdates() {
-            if (locationListener != null) {
-                locationManager.removeUpdates(locationListener)
+                if (throwExceptionIfDisabled) locationEmitter.onError(ProviderDisabledException(provider)) else locationEmitter.onCompleted()
             }
         }
     }
