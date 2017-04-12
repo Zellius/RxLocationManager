@@ -10,6 +10,9 @@ buildscript {
         classpath 'com.android.tools.build:gradle:2.3.1'
         classpath 'com.novoda:bintray-release:0.4.0'
         classpath 'org.kt3k.gradle.plugin:coveralls-gradle-plugin:2.8.1'
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7.3'
+        classpath 'com.github.dcendents:android-maven-gradle-plugin:1.5'
+        classpath 'org.jetbrains.dokka:dokka-android-gradle-plugin:0.9.13'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
 
         // NOTE: Do not place your application dependencies here; they belong
@@ -25,8 +28,8 @@ allprojects {
 subprojects {
     if (!name.contains('sample')) {
         apply plugin: 'jacoco'
-        apply plugin: 'com.novoda.bintray-release'
         apply plugin: 'com.android.library'
+        apply from: '../publish.gradle'
 
         android {
             compileSdkVersion 25

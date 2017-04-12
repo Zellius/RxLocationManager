@@ -12,11 +12,8 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 }
 
-publish {
-    groupId = 'com.github.zellius'
-    artifactId = 'rxlocationmanager.kotlin'
-    publishVersion = '0.1.1'
-    desc = 'Android library written on Kotlin that helps to get location using standart LocationManager and RxJava'
-    licences = ['MIT']
-    website = 'https://github.com/Zellius/RxLocationManager'
-}
+ext.lib_version = '0.1.1'
+ext.lib_name = 'KotlinRxLocationManager'
+ext.lib_description = 'Android library written on Kotlin that helps to get location using standart LocationManager and RxJava'
+
+archivesBaseName = 'rxlocationmanager.kotlin'
