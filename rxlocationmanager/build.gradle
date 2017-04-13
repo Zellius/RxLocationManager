@@ -1,8 +1,3 @@
-publish {
-    groupId = 'com.github.zellius'
-    artifactId = 'rxlocationmanager'
-    publishVersion = '0.1.2'
-    desc = 'Android library that helps to get location using standart LocationManager and RxJava'
-    licences = ['MIT']
-    website = 'https://github.com/Zellius/RxLocationManager'
-}
+ext.lib_version = '0.1.2'
+ext.lib_name = 'RxLocationManager'
+ext.lib_description = 'Android library that helps to get location using standart LocationManager and RxJava'
