@@ -1,17 +1,17 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
-apply plugin: 'com.github.kt3k.coveralls'
-apply plugin: 'jacoco'
 
 buildscript {
     repositories {
         jcenter()
         mavenCentral()
     }
-    ext.kotlin_version = '1.0.0'
+    ext.kotlin_version = '1.1.1'
     dependencies {
-        classpath 'com.android.tools.build:gradle:2.0.0'
-        classpath 'com.novoda:bintray-release:0.3.4'
-        classpath 'org.kt3k.gradle.plugin:coveralls-gradle-plugin:2.6.3'
+        classpath 'com.android.tools.build:gradle:2.3.1'
+        classpath 'org.kt3k.gradle.plugin:coveralls-gradle-plugin:2.8.1'
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7.3'
+        classpath 'com.github.dcendents:android-maven-gradle-plugin:1.5'
+        classpath 'org.jetbrains.dokka:dokka-android-gradle-plugin:0.9.13'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
 
         // NOTE: Do not place your application dependencies here; they belong
@@ -25,9 +25,47 @@ allprojects {
     }
 }
 subprojects {
-    if (!project.name.contains('sample')) {
+    if (!name.contains('sample')) {
         apply plugin: 'jacoco'
         apply plugin: 'com.android.library'
+        apply from: '../publish.gradle'
+
+        android {
+            compileSdkVersion 25
+            buildToolsVersion "25.0.2"
+
+            defaultConfig {
+                minSdkVersion 9
+                targetSdkVersion 25
+            }
+            buildTypes {
+                release {
+                    minifyEnabled false
+                    proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+                }
+                debug {
+                    testCoverageEnabled true
+                }
+            }
+            testOptions {
+                unitTests.all {
+                    jacoco {
+                        includeNoLocationClasses = true
+                    }
+                }
+            }
+        }
+
+        dependencies {
+            compile fileTree(include: ['*.jar'], dir: 'libs')
+            compile 'io.reactivex:rxjava:1.2.9'
+            compile 'io.reactivex:rxandroid:1.2.1'
+            compile 'com.android.support:support-annotations:25.3.1'
+
+            testCompile 'junit:junit:4.12'
+            testCompile 'org.robolectric:robolectric:3.3.2'
+            testCompile 'org.mockito:mockito-core:2.7.21'
+        }
 
         task jacocoTestReport(type: JacocoReport, dependsOn: "testDebugUnitTest") {
             group = "Reporting"
@@ -53,15 +91,6 @@ subprojects {
         }
     }
 }
-project(':kotlin') {
-    android {
-        sourceSets {
-            main.java.srcDirs += 'src/main/kotlin'
-            test.java.srcDirs += 'src/test/kotlin'
-            androidTest.java.srcDirs += 'src/androidTest/kotlin'
-        }
-    }
-}
 
 task clean(type: Delete) {
     delete rootProject.buildDir
@@ -71,6 +100,7 @@ def validSubprojects = subprojects.findAll {
     !it.name.contains('sample')
 }
 
+apply plugin: 'jacoco'
 task jacocoRootReport(type: JacocoReport, group: 'Coverage reports', description: 'Generates an aggregate report from all subprojects') {
     dependsOn = validSubprojects.jacocoTestReport
 
@@ -85,6 +115,7 @@ task jacocoRootReport(type: JacocoReport, group: 'Coverage reports', description
     }
 }
 
+apply plugin: 'com.github.kt3k.coveralls'
 coveralls {
     jacocoReportPath = "${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.xml"
     sourceDirs = validSubprojects.android.sourceSets.main.java.srcDirs.flatten()
