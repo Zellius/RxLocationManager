@@ -8,8 +8,8 @@ import android.util.Log;
 
 import java.util.concurrent.TimeUnit;
 
-import ru.solodovnikov.rxlocationmanager.kotlin.LocationRequestBuilder;
-import ru.solodovnikov.rxlocationmanager.kotlin.LocationTime;
+import ru.solodovnikov.rxlocationmanager.LocationRequestBuilder;
+import ru.solodovnikov.rxlocationmanager.LocationTime;
 import rx.Subscriber;
 
 public class MainActivity extends Activity {

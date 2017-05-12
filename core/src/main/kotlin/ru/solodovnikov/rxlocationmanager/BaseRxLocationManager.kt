@@ -1,10 +1,18 @@
 package ru.solodovnikov.rxlocationmanager
 
+import android.content.Context
+import android.location.Location
 import android.location.LocationManager
+import android.os.Build
+import android.os.SystemClock
 import java.util.concurrent.TimeoutException
 
+/**
+ * Abstract class used just to implement rxJava1 and rxJava2
+ */
+abstract class BaseRxLocationManager<out SINGLE, out MAYBE>(context: Context) {
+    protected val locationManager: LocationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
-abstract class BaseRxLocationManager<out SINGLE, out MAYBE> internal constructor(protected val locationManager: LocationManager) {
     /**
      * Get last location from specific provider
      * Observable will emit [ElderLocationException] if [howOldCanBe] is not null and location time is not valid.
@@ -17,8 +25,6 @@ abstract class BaseRxLocationManager<out SINGLE, out MAYBE> internal constructor
      */
     @JvmOverloads
     fun getLastLocation(provider: String, howOldCanBe: LocationTime? = null) = baseGetLastLocation(provider, howOldCanBe)
-
-    protected abstract fun baseGetLastLocation(provider: String, howOldCanBe: LocationTime?): MAYBE
 
     /**
      * Try to get current location by specific provider.
@@ -34,5 +40,21 @@ abstract class BaseRxLocationManager<out SINGLE, out MAYBE> internal constructor
     @JvmOverloads
     fun requestLocation(provider: String, timeOut: LocationTime? = null) = baseRequestLocation(provider, timeOut)
 
+    protected abstract fun baseGetLastLocation(provider: String, howOldCanBe: LocationTime?): MAYBE
+
     protected abstract fun baseRequestLocation(provider: String, timeOut: LocationTime?): SINGLE
+
+    /**
+     * Check is location not old
+     * @param howOldCanBe how old the location can be
+     * @return true if location is not so old as [howOldCanBe]
+     */
+    protected fun Location.isNotOld(howOldCanBe: LocationTime): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+            SystemClock.elapsedRealtimeNanos() - elapsedRealtimeNanos < howOldCanBe.timeUnit.toNanos(howOldCanBe.time)
+        } else {
+            System.currentTimeMillis() - time < howOldCanBe.timeUnit.toMillis(howOldCanBe.time)
+        }
+    }
+
 }

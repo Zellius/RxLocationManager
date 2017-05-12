@@ -5,8 +5,9 @@ import android.location.LocationManager
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
-import ru.solodovnikov.rxlocationmanager.kotlin.LocationRequestBuilder
-import ru.solodovnikov.rxlocationmanager.kotlin.LocationTime
+import ru.solodovnikov.rxlocationmanager.LocationRequestBuilder
+import ru.solodovnikov.rxlocationmanager.LocationTime
+
 import rx.Subscriber
 import java.util.concurrent.TimeUnit
 
@@ -18,7 +19,7 @@ class MainActivity : AppCompatActivity() {
 
         val locationRequestBuilder = LocationRequestBuilder(this)
 
-        locationRequestBuilder.addLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(30, TimeUnit.SECONDS), false)
+        locationRequestBuilder.addLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(30, TimeUnit.SECONDS))
                 .addRequestLocation(LocationManager.GPS_PROVIDER, LocationTime(10, TimeUnit.SECONDS))
                 .setDefaultLocation(Location(LocationManager.PASSIVE_PROVIDER))
                 .create()

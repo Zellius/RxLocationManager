@@ -1,18 +1,22 @@
 package ru.solodovnikov.rxlocationmanager
 
+import android.content.Context
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Build
+import io.reactivex.Single
+import io.reactivex.SingleTransformer
 import io.reactivex.schedulers.Schedulers
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mock
-import org.mockito.Mockito
+import org.mockito.Mockito.*
 import org.mockito.MockitoAnnotations
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
@@ -20,28 +24,35 @@ import java.util.concurrent.TimeoutException
 @Config(sdk = intArrayOf(Build.VERSION_CODES.JELLY_BEAN))
 class RxLocationManager2Test {
     private val networkProvider = LocationManager.NETWORK_PROVIDER
-    private val scheduler = Schedulers.trampoline()
 
     @Mock
+    lateinit var context: Context
+    @Mock
     lateinit var locationManager: LocationManager
+
+    val defaultRxLocationManager: RxLocationManager
+        get() = RxLocationManager(context, Schedulers.trampoline())
+
+    val defaultLocationRequestBuilder: LocationRequestBuilder
+        get() = LocationRequestBuilder(defaultRxLocationManager)
 
     @Before
     fun setUp() {
         MockitoAnnotations.initMocks(this)
+        `when`(context.getSystemService(eq(Context.LOCATION_SERVICE)))
+                .thenReturn(locationManager)
     }
 
     /**
-     * Test that all fine
+     * Test that getLastLocation works fine
      */
     @Test
     fun getLastLocation_Success() {
         val expectedLocation = buildFakeLocation()
 
-        Mockito.`when`(locationManager.getLastKnownLocation(networkProvider)).thenReturn(expectedLocation)
+        `when`(locationManager.getLastKnownLocation(networkProvider)).thenReturn(expectedLocation)
 
-        val rxLocationManager = RxLocationManager(locationManager, scheduler)
-
-        rxLocationManager.getLastLocation(networkProvider)
+        defaultRxLocationManager.getLastLocation(networkProvider)
                 .test()
                 .await()
                 .assertNoErrors()
@@ -50,32 +61,47 @@ class RxLocationManager2Test {
     }
 
     /**
-     * Test that getLastLocation throw [ElderLocationException] if howOldCanBe is provided
+     * Test that getLastLocation will throw [ElderLocationException] if location is old
      *
      */
     @Test
     fun getLastLocation_Old() {
-        val expectedLocation = buildFakeLocation()
-        expectedLocation.time = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1)
+        `when`(locationManager.getLastKnownLocation(networkProvider))
+                .thenReturn(buildFakeLocation()
+                        .apply { time = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1) })
 
-        Mockito.`when`(locationManager.getLastKnownLocation(networkProvider)).thenReturn(expectedLocation)
-
-        val rxLocationManager = getDefaultRxLocationManager()
-
-        rxLocationManager.getLastLocation(networkProvider, LocationTime(30, TimeUnit.MINUTES))
+        defaultRxLocationManager.getLastLocation(networkProvider, LocationTime(30, TimeUnit.MINUTES))
                 .test()
                 .await()
                 .assertError(ElderLocationException::class.java)
     }
 
     /**
-     * Test that getLastLocation throw [ProviderHasNoLastLocationException] if locationManager emit null
+     * Test that getLastLocation will emit [Location] if it is not old
+     */
+    @Test
+    fun getLastLocation_NotOld() {
+        val expectedLocation = buildFakeLocation()
+
+        `when`(locationManager.getLastKnownLocation(networkProvider))
+                .thenReturn(expectedLocation)
+
+        defaultRxLocationManager.getLastLocation(networkProvider, LocationTime(30, TimeUnit.MINUTES))
+                .test()
+                .await()
+                .assertNoErrors()
+                .assertComplete()
+                .assertValue(expectedLocation)
+    }
+
+    /**
+     * Test that getLastLocation emit no value if [LocationManager] emit null
      */
     @Test
     fun getLastLocation_NoLocation() {
-        Mockito.`when`(locationManager.getLastKnownLocation(networkProvider)).thenReturn(null)
+        `when`(locationManager.getLastKnownLocation(networkProvider)).thenReturn(null)
 
-        getDefaultRxLocationManager().getLastLocation(networkProvider)
+        defaultRxLocationManager.getLastLocation(networkProvider)
                 .test()
                 .await()
                 .assertNoErrors()
@@ -91,16 +117,14 @@ class RxLocationManager2Test {
         setIsProviderEnabled(isEnabled = true)
 
         //answer
-        Mockito.doAnswer {
+        doAnswer {
             val args = it.arguments
             val locationListener = args[1] as LocationListener
             locationListener.onLocationChanged(expectedLocation)
             return@doAnswer null
-        }.`when`(locationManager).requestSingleUpdate(Mockito.eq(networkProvider), Mockito.any(), Mockito.any())
+        }.`when`(locationManager).requestSingleUpdate(eq(networkProvider), any(), any())
 
-        val rxLocationManager = getDefaultRxLocationManager()
-
-        rxLocationManager.requestLocation(networkProvider)
+        defaultRxLocationManager.requestLocation(networkProvider)
                 .test()
                 .await()
                 .assertNoErrors()
@@ -109,110 +133,136 @@ class RxLocationManager2Test {
     }
 
     /**
-     * Test that request location throw Exception if provider disabled
+     * Test that request location throw [ProviderDisabledException] if provider disabled
      */
     @Test
     fun requestLocation_ProviderDisabled() {
         //set provider disabled
         setIsProviderEnabled(isEnabled = false)
 
-        val rxLocationManager = getDefaultRxLocationManager()
-
-        rxLocationManager.requestLocation(networkProvider)
+        defaultRxLocationManager.requestLocation(networkProvider)
                 .test()
                 .await()
                 .assertError(ProviderDisabledException::class.java)
     }
 
     /**
-     * Test that request location throw TimeOutException
+     * Test that request location throw [TimeoutException]
      */
     @Test
     fun requestLocation_TimeOutError() {
         //set provider enabled
         setIsProviderEnabled(isEnabled = true)
 
-        val rxLocationManager = getDefaultRxLocationManager()
-
-        rxLocationManager.requestLocation(networkProvider, LocationTime(5, TimeUnit.SECONDS))
+        defaultRxLocationManager.requestLocation(networkProvider, LocationTime(10, TimeUnit.MILLISECONDS))
                 .test()
                 .await()
                 .assertError(TimeoutException::class.java)
     }
 
+    /**
+     * * Request location - TimeOut
+     * * Last Location - null
+     *
+     * Will return default location
+     */
     @Test
-    fun builder_Success() {
-        val location = buildFakeLocation()
-
-        val locationRequestBuilder = getDefaultLocationRequestBuilder()
-
-        val createdObservable = locationRequestBuilder.addLastLocation(provider = networkProvider)
-                .addRequestLocation(provider = networkProvider, timeOut = LocationTime(5, TimeUnit.SECONDS))
-                .setDefaultLocation(location)
-                .create()
+    fun builder_SuccessDefaultLocation() {
+        val defaultLocation = buildFakeLocation()
 
         //set provider enabled
         setIsProviderEnabled(isEnabled = true)
 
-        Mockito.`when`(locationManager.getLastKnownLocation(networkProvider)).thenReturn(null)
+        `when`(locationManager.getLastKnownLocation(eq(networkProvider)))
+                .thenReturn(null)
 
-        createdObservable.test()
+        defaultLocationRequestBuilder.addRequestLocation(networkProvider, LocationTime(5, TimeUnit.MILLISECONDS))
+                .addLastLocation(networkProvider)
+                .setDefaultLocation(defaultLocation)
+                .create()
+                .test()
                 .await()
                 .assertNoErrors()
                 .assertComplete()
-                .assertValue(location)
+                .assertValueCount(1)
+                .assertValue(defaultLocation)
     }
 
     /**
-     * Return null if no default location is setted and no value was emitted
+     * * Request location - [ProviderDisabledException]
+     * * Last Location - null
+     * * Request location - [ProviderDisabledException]
+     *
+     * Will emit no values
      */
     @Test
-    fun builder_Success2() {
-        val location1 = buildFakeLocation()
-        location1.time = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1)
+    fun builder_SuccessEmpty() {
+        //set providers disabled
+        setIsProviderEnabled(networkProvider, false)
+        setIsProviderEnabled(LocationManager.GPS_PROVIDER, false)
 
-        val locationRequestBuilder = getDefaultLocationRequestBuilder()
-
-        val createdObservable = locationRequestBuilder.addLastLocation(provider = networkProvider, howOldCanBe = LocationTime(10, TimeUnit.MINUTES))
-                .addRequestLocation(provider = networkProvider, timeOut = LocationTime(5, TimeUnit.SECONDS))
+        defaultLocationRequestBuilder.addRequestLocation(networkProvider, LocationTime(5, TimeUnit.MILLISECONDS))
+                .addLastLocation(networkProvider)
+                .addRequestLocation(LocationManager.GPS_PROVIDER, LocationTime(5, TimeUnit.MILLISECONDS))
                 .create()
-
-        //set provider enabled
-        setIsProviderEnabled(isEnabled = true)
-
-        Mockito.`when`(locationManager.getLastKnownLocation(networkProvider)).thenReturn(location1)
-
-        createdObservable.test()
+                .test()
                 .await()
+                .assertNoErrors()
+                .assertComplete()
                 .assertNoValues()
     }
 
+    /**
+     * * Request location - [ProviderDisabledException]
+     * * Last Location - null
+     * * Request location - [Throwable]
+     *
+     * Will emit [Throwable]
+     */
     @Test
-    fun builder_Success3() {
-        val location1 = buildFakeLocation()
+    fun builder_Error() {
+        setIsProviderEnabled(isEnabled = false)
 
-        val locationRequestBuilder = getDefaultLocationRequestBuilder()
+        `when`(locationManager.getLastKnownLocation(eq(networkProvider)))
+                .thenReturn(null)
 
-        val createdObservable = locationRequestBuilder.setDefaultLocation(location1).create()
+        val e = Throwable()
 
-        createdObservable.test()
+        defaultLocationRequestBuilder.addRequestLocation(networkProvider, LocationTime(5, TimeUnit.MILLISECONDS))
+                .addLastLocation(networkProvider)
+                .addRequestLocation(LocationManager.GPS_PROVIDER, transformer = SingleTransformer { Single.error { e } })
+                .setDefaultLocation(buildFakeLocation())
+                .create()
+                .test()
                 .await()
-                .assertValue(location1)
+                .assertError(e)
+    }
+
+    /**
+     * Emit default value if only it was setted
+     */
+    @Test
+    fun builder_SuccessOnlyDefaultValue() {
+        val location = buildFakeLocation()
+
+        defaultLocationRequestBuilder.setDefaultLocation(location)
+                .create()
+                .test()
+                .await()
+                .assertValue(location)
     }
 
     private fun setIsProviderEnabled(provider: String = networkProvider, isEnabled: Boolean = false) {
-        Mockito.`when`(locationManager.isProviderEnabled(provider)).thenReturn(isEnabled)
+        `when`(locationManager.isProviderEnabled(eq(provider))).thenReturn(isEnabled)
     }
 
-    private fun getDefaultRxLocationManager() = RxLocationManager(locationManager, scheduler)
+    private fun buildFakeLocation(provider: String = networkProvider) =
+            Location(provider)
+                    .apply {
+                        val r = Random()
 
-    private fun getDefaultLocationRequestBuilder() = LocationRequestBuilder(getDefaultRxLocationManager(), scheduler)
-
-    private fun buildFakeLocation(provider: String = networkProvider): Location {
-        val location = Location(provider)
-        location.latitude = 50.0
-        location.longitude = 30.0
-
-        return location
-    }
+                        latitude = r.nextDouble()
+                        longitude = r.nextDouble()
+                        time = System.currentTimeMillis()
+                    }
 }
