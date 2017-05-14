@@ -13,10 +13,17 @@ import rx.android.schedulers.AndroidSchedulers
 import rx.functions.Action1
 import java.util.concurrent.TimeoutException
 
-class RxLocationManager internal constructor(locationManager: LocationManager,
-                                             private val scheduler: Scheduler = AndroidSchedulers.mainThread()) : BaseRxLocationManager<Single<Location>, Single<Location>>(locationManager) {
-    constructor(context: Context) : this(context.getSystemService(Context.LOCATION_SERVICE) as LocationManager)
+/**
+ * Implementation of [BaseRxLocationManager] based on RxJava1
+ */
+class RxLocationManager internal constructor(context: Context,
+                                             private val scheduler: Scheduler) : BaseRxLocationManager<Single<Location>, Single<Location>>(context) {
+    constructor(context: Context) : this(context, AndroidSchedulers.mainThread())
 
+    /**
+     * @return Result [Single] will emit [ProviderHasNoLastLocationException] if there is no location by this [provider].
+     * Or it will be emit [ElderLocationException] if [howOldCanBe] not null and location is too old.
+     */
     override fun baseGetLastLocation(provider: String, howOldCanBe: LocationTime?): Single<Location> =
             Single.fromCallable { locationManager.getLastKnownLocation(provider) ?: throw ProviderHasNoLastLocationException(provider) }
                     .compose {
@@ -31,6 +38,9 @@ class RxLocationManager internal constructor(locationManager: LocationManager,
                         }
                     }.compose { applySchedulers(it) }
 
+    /**
+     * @return Result [Single] can throw [ProviderDisabledException] or [TimeoutException] if [timeOut] not null
+     */
     override fun baseRequestLocation(provider: String, timeOut: LocationTime?): Single<Location> =
             Observable.create(RxLocationListener(locationManager, provider), Emitter.BackpressureMode.NONE)
                     .toSingle()
@@ -73,15 +83,16 @@ class RxLocationManager internal constructor(locationManager: LocationManager,
     }
 }
 
-class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationManager) : BaseLocationRequestBuilder<Single<Location>, Single<Location>, Observable.Transformer<Location, Location>>(rxLocationManager) {
-    private val observables: MutableList<Observable<Location?>> = arrayListOf()
-
+class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationManager) : BaseLocationRequestBuilder<Single<Location>, Single<Location>, Single.Transformer<Location, Location>, Single.Transformer<Location, Location>>(rxLocationManager) {
     constructor(context: Context) : this(RxLocationManager(context))
+
+    private var resultObservable = Observable.empty<Location>()
 
     override fun baseAddRequestLocation(provider: String,
                                         timeOut: LocationTime?,
-                                        transformer: Observable.Transformer<Location, Location>?) =
+                                        transformer: Single.Transformer<Location, Location>?) =
             rxLocationManager.requestLocation(provider, timeOut)
+                    .compose { if (transformer != null) it.compose(transformer) else it }
                     .toObservable()
                     .onErrorResumeNext {
                         when (it) {
@@ -89,13 +100,16 @@ class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationM
                             else -> Observable.error<Location>(it)
                         }
                     }
-                    .also { observables.add(if (transformer != null) it.compose(transformer) else it) }
-                    .let { this }
+                    .let {
+                        resultObservable = resultObservable.concatWith(it)
+                        this
+                    }
 
     override fun baseAddLastLocation(provider: String,
                                      howOldCanBe: LocationTime?,
-                                     transformer: Observable.Transformer<Location, Location>?) =
+                                     transformer: Single.Transformer<Location, Location>?) =
             rxLocationManager.getLastLocation(provider, howOldCanBe)
+                    .compose { if (transformer != null) it.compose(transformer) else it }
                     .toObservable()
                     .onErrorResumeNext {
                         when (it) {
@@ -103,25 +117,10 @@ class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationM
                             else -> Observable.error<Location>(it)
                         }
                     }
-                    .also { observables.add(if (transformer != null) it.compose(transformer) else it) }
-                    .let { this }
-
-    override fun create(): Single<Location> {
-
-        var result = Observable.empty<Location>()
-
-        observables.forEach {
-            result = result.concatWith(it.compose {
-                it.onErrorResumeNext {
-                    if (returnDefaultLocationOnError) {
-                        Observable.empty<Location>()
-                    } else {
-                        Observable.error<Location>(it)
+                    .let {
+                        resultObservable = resultObservable.concatWith(it)
+                        this
                     }
-                }
-            })
-        }
 
-        return result.firstOrDefault(defaultLocation).toSingle()
-    }
+    override fun create(): Single<Location> = resultObservable.firstOrDefault(defaultLocation).toSingle()
 }

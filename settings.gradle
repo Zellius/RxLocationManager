@@ -1,1 +1,1 @@
-include ':core', ':rxlocationmanager-rxjava2'
+include ':core', ':rxlocationmanager-rxjava2', ':rxlocationmanager.kotlin'
