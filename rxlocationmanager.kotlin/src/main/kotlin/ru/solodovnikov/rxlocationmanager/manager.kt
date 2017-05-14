@@ -21,15 +21,15 @@ class RxLocationManager internal constructor(context: Context,
     constructor(context: Context) : this(context, AndroidSchedulers.mainThread())
 
     /**
-     * @return Result [Single] will emit [ProviderHasNoLastLocationException] if there is no location by this [provider].
+     * @return Result [Single] will emit null if there is no location by this [provider].
      * Or it will be emit [ElderLocationException] if [howOldCanBe] not null and location is too old.
      */
     override fun baseGetLastLocation(provider: String, howOldCanBe: LocationTime?): Single<Location> =
-            Single.fromCallable { locationManager.getLastKnownLocation(provider) ?: throw ProviderHasNoLastLocationException(provider) }
+            Single.fromCallable { locationManager.getLastKnownLocation(provider) }
                     .compose {
                         if (howOldCanBe != null) {
                             it.doOnSuccess {
-                                if (!it.isNotOld(howOldCanBe)) {
+                                if (it != null && !it.isNotOld(howOldCanBe)) {
                                     throw ElderLocationException(it)
                                 }
                             }
@@ -111,9 +111,10 @@ class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationM
             rxLocationManager.getLastLocation(provider, howOldCanBe)
                     .compose { if (transformer != null) it.compose(transformer) else it }
                     .toObservable()
+                    .filter { it != null }
                     .onErrorResumeNext {
                         when (it) {
-                            is ElderLocationException, is ProviderHasNoLastLocationException -> Observable.empty<Location>()
+                            is ElderLocationException -> Observable.empty<Location>()
                             else -> Observable.error<Location>(it)
                         }
                     }
@@ -122,5 +123,7 @@ class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationM
                         this
                     }
 
-    override fun create(): Single<Location> = resultObservable.firstOrDefault(defaultLocation).toSingle()
+    override fun create(): Single<Location> =
+            resultObservable.firstOrDefault(defaultLocation)
+                    .toSingle()
 }

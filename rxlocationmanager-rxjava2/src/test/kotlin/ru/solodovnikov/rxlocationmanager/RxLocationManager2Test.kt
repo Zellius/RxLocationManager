@@ -99,7 +99,8 @@ class RxLocationManager2Test {
      */
     @Test
     fun getLastLocation_NoLocation() {
-        `when`(locationManager.getLastKnownLocation(networkProvider)).thenReturn(null)
+        `when`(locationManager.getLastKnownLocation(networkProvider))
+                .thenReturn(null)
 
         defaultRxLocationManager.getLastLocation(networkProvider)
                 .test()
