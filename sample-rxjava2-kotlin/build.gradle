@@ -1,8 +1,9 @@
 apply plugin: 'com.android.application'
+project.apply plugin: 'kotlin-android'
 
 android {
     compileSdkVersion 25
-    buildToolsVersion "25.0.2"
+    buildToolsVersion "25.0.3"
 
     defaultConfig {
         applicationId "ru.solodovnikov.rxlocationmanager.sample"
@@ -17,6 +18,9 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
 }
 
 repositories {
@@ -25,7 +29,7 @@ repositories {
 
 dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
-    testCompile 'junit:junit:4.12'
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile 'com.android.support:appcompat-v7:25.3.1'
-    compile project(':rxlocationmanager.kotlin')
+    compile project(':rxlocationmanager-rxjava2')
 }
