@@ -62,7 +62,6 @@ class RxLocationManager2Test {
 
     /**
      * Test that getLastLocation will throw [ElderLocationException] if location is old
-     *
      */
     @Test
     fun getLastLocation_Old() {
@@ -95,7 +94,7 @@ class RxLocationManager2Test {
     }
 
     /**
-     * Test that getLastLocation emit no value if [LocationManager] emit null
+     * Test that getLastLocation emit no value if [LocationManager] return null
      */
     @Test
     fun getLastLocation_NoLocation() {
@@ -250,6 +249,8 @@ class RxLocationManager2Test {
                 .create()
                 .test()
                 .await()
+                .assertNoErrors()
+                .assertComplete()
                 .assertValue(location)
     }
 

@@ -115,6 +115,11 @@ class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationM
                         this
                     }
 
+    /**
+     * Construct final observable.
+     *
+     * @return It will emit [defaultLocation] if it not null and final observable is empty.
+     */
     override fun create(): Maybe<Location> =
             resultObservable.firstElement()
                     .compose { if (defaultLocation != null) it.defaultIfEmpty(defaultLocation) else it }

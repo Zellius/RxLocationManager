@@ -56,8 +56,6 @@ abstract class BaseLocationRequestBuilder<out SINGLE, out MAYBE, in TRANSFORMER_
 
     /**
      * Construct final observable.
-     *
-     * It will emit [defaultLocation] if it not null and final observable is empty.
      */
     abstract fun create(): MAYBE
 }
