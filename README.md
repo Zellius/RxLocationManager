@@ -4,7 +4,7 @@ RxLocationManager
 
 Android library that helps to get location using standart LocationManager and RxJava. It does not use the Google Play Services and it's easier to use.
 
-Feautures
+Features
 -----------------
 
  - Get last known device location from any location provider. You can specify how long the location could be obtained. For example you want only those locations that have been received up to 30 minutes ago.
