@@ -238,7 +238,7 @@ class RxLocationManagerTest {
 
     /**
      * * Request location - [ProviderDisabledException]
-     * * Last Location - null
+     * * Last Location - [SecurityException]
      * * Request location - [Throwable]
      *
      * Will emit [Throwable]
@@ -247,19 +247,48 @@ class RxLocationManagerTest {
     fun testBuilder_Error() {
         setIsProviderEnabled(isEnabled = false)
 
-        `when`(locationManager.getLastKnownLocation(eq(networkProvider)))
-                .thenReturn(null)
+        val e = SecurityException()
 
-        val e = Throwable()
+        `when`(locationManager.getLastKnownLocation(eq(networkProvider)))
+                .thenThrow(e)
 
         defaultLocationRequestBuilder.addRequestLocation(networkProvider, LocationTime(5, TimeUnit.MILLISECONDS))
                 .addLastLocation(networkProvider)
-                .addRequestLocation(LocationManager.GPS_PROVIDER, transformer = Single.Transformer { Single.error(e) })
+                .addRequestLocation(LocationManager.GPS_PROVIDER)
                 .setDefaultLocation(buildFakeLocation())
                 .create()
                 .test()
                 .awaitTerminalEvent()
                 .assertError(e)
+    }
+
+    /**
+     * * Request location - [ProviderDisabledException]
+     * * Last Location - [SecurityException] with transformer
+     * * Request location - [Throwable]
+     *
+     * Will emit defaultLocation
+     */
+    @Test
+    fun testBuilder_ErrorHandling() {
+        setIsProviderEnabled(isEnabled = false)
+
+        val location = buildFakeLocation()
+        val ex = SecurityException()
+
+        `when`(locationManager.getLastKnownLocation(eq(networkProvider)))
+                .thenThrow(ex)
+
+        defaultLocationRequestBuilder.addRequestLocation(networkProvider, LocationTime(5, TimeUnit.MILLISECONDS))
+                .addLastLocation(networkProvider, transformer = Single.Transformer { it.onErrorResumeNext { t: Throwable? -> if (t == ex) Single.just(null) else Single.error(t) } })
+                .addRequestLocation(LocationManager.GPS_PROVIDER)
+                .setDefaultLocation(location)
+                .create()
+                .test()
+                .awaitTerminalEvent()
+                .assertNoErrors()
+                .assertCompleted()
+                .assertValue(location)
     }
 
     /**
