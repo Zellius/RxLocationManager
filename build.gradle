@@ -111,6 +111,62 @@ project(':rxlocationmanager.kotlin') {
     includeCoreClasses(it)
 }
 
+subprojects {
+    if (name.contains('sample')) {
+        prepareSample(it)
+    }
+}
+
+def prepareSample(Project p){
+    def isKotlinSample = p.name.contains('kotlin')
+    def isRxJava2Sample = p.name.contains('rxjava2')
+
+    p.apply plugin: 'com.android.application'
+    if (isKotlinSample) {
+        p.apply plugin: 'kotlin-android'
+    }
+
+    p.android {
+        compileSdkVersion 25
+        buildToolsVersion "25.0.3"
+
+        defaultConfig {
+            applicationId "ru.solodovnikov.rxlocationmanager.sample"
+            minSdkVersion 14
+            targetSdkVersion 25
+            versionCode 1
+            versionName "1.0"
+        }
+        buildTypes {
+            release {
+                minifyEnabled false
+                proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            }
+        }
+        if (isKotlinSample) {
+            sourceSets {
+                main.java.srcDirs += 'src/main/kotlin'
+            }
+        }
+    }
+
+    p.dependencies {
+        compile fileTree(include: ['*.jar'], dir: 'libs')
+        compile 'com.android.support:appcompat-v7:25.3.1'
+        compile 'com.android.support:design:25.3.1'
+
+        if (isKotlinSample) {
+            compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+        }
+
+        if (isRxJava2Sample) {
+            compile project(':rxlocationmanager-rxjava2')
+        } else {
+            compile project(':rxlocationmanager.kotlin')
+        }
+    }
+}
+
 //subprojects {
 //    if (!project.name.contains('sample')) {
 //        apply plugin: 'jacoco'
