@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">sample-rxjava2-kotlin</string>
+    <string name="app_name">sample-rxjava2-java</string>
 
     <string name="last_network">Last network location</string>
     <string name="last_network_minute_old">Last network location 1 minute old</string>

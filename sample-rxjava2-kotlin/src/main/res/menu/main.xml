@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/last_network"
+        android:title="@string/last_network"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/last_network_minute_old"
+        android:title="@string/last_network_minute_old"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/request_location"
+        android:title="@string/request_location"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/complicated_request_location"
+        android:title="@string/complicated_request_location"
+        app:showAsAction="never" />
+</menu>

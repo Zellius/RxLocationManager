@@ -9,11 +9,10 @@ import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.Toolbar
 import android.view.Menu
 import android.view.MenuItem
-import io.reactivex.Maybe
-import io.reactivex.Single
 import ru.solodovnikov.rxlocationmanager.LocationRequestBuilder
 import ru.solodovnikov.rxlocationmanager.LocationTime
 import ru.solodovnikov.rxlocationmanager.RxLocationManager
+import rx.Single
 import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
@@ -87,22 +86,8 @@ class MainActivity : AppCompatActivity() {
                 .show()
     }
 
-    fun Maybe<Location>.testSubscribe(methodName: String) {
-        subscribe({ showLocationMessage(it, methodName) },
-                { showErrorMessage(it, methodName) },
-                { showSnackbar("$methodName Completed") })
-    }
-
-    fun Single<Location>.testSubscribe(methodName: String) {
-        subscribe({ showLocationMessage(it, methodName) },
-                { showErrorMessage(it, methodName) })
-    }
-
-    private fun showLocationMessage(location: Location?, methodName: String) {
-        showSnackbar("$methodName Success: ${location?.toString() ?: "Empty location"}")
-    }
-
-    private fun showErrorMessage(throwable: Throwable, methodName: String) {
-        showSnackbar("$methodName Error: ${throwable.message}")
+    fun <T> Single<T>.testSubscribe(methodName: String) {
+        subscribe({ showSnackbar("$methodName Success: ${it?.toString() ?: "Empty location"}") },
+                { showSnackbar("$methodName Error: ${it.message}") })
     }
 }
