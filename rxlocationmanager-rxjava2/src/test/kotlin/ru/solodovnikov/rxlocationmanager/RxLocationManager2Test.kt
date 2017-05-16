@@ -11,6 +11,7 @@ import io.reactivex.schedulers.Schedulers
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.ArgumentCaptor
 import org.mockito.Mock
 import org.mockito.Mockito.*
 import org.mockito.MockitoAnnotations
@@ -19,6 +20,7 @@ import org.robolectric.annotation.Config
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
+import kotlin.test.assertNotNull
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = intArrayOf(Build.VERSION_CODES.JELLY_BEAN))
@@ -47,7 +49,7 @@ class RxLocationManager2Test {
      * Test that getLastLocation works fine
      */
     @Test
-    fun getLastLocation_Success() {
+    fun testGetLastLocation_Success() {
         val expectedLocation = buildFakeLocation()
 
         `when`(locationManager.getLastKnownLocation(networkProvider)).thenReturn(expectedLocation)
@@ -64,7 +66,7 @@ class RxLocationManager2Test {
      * Test that getLastLocation will throw [ElderLocationException] if location is old
      */
     @Test
-    fun getLastLocation_Old() {
+    fun testGetLastLocation_Old() {
         `when`(locationManager.getLastKnownLocation(networkProvider))
                 .thenReturn(buildFakeLocation()
                         .apply { time = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1) })
@@ -79,7 +81,7 @@ class RxLocationManager2Test {
      * Test that getLastLocation will emit [Location] if it is not old
      */
     @Test
-    fun getLastLocation_NotOld() {
+    fun testGetLastLocation_NotOld() {
         val expectedLocation = buildFakeLocation()
 
         `when`(locationManager.getLastKnownLocation(networkProvider))
@@ -97,7 +99,7 @@ class RxLocationManager2Test {
      * Test that getLastLocation emit no value if [LocationManager] return null
      */
     @Test
-    fun getLastLocation_NoLocation() {
+    fun testGetLastLocation_NoLocation() {
         `when`(locationManager.getLastKnownLocation(networkProvider))
                 .thenReturn(null)
 
@@ -109,8 +111,29 @@ class RxLocationManager2Test {
                 .assertNoValues()
     }
 
+    /**
+     * Test that [LocationManager] will be unsubscribed after dispose
+     */
     @Test
-    fun requestLocation_Success() {
+    fun testRequestLocation_Unsubscribe() {
+        //set provider enabled
+        setIsProviderEnabled(isEnabled = true)
+
+        defaultRxLocationManager.requestLocation(networkProvider)
+                .subscribe()
+                .also { disposable ->
+                    ArgumentCaptor.forClass(LocationListener::class.java)
+                            .apply {
+                                verify(locationManager).requestSingleUpdate(eq(networkProvider), capture(), isNull())
+                                assertNotNull(value)
+                                disposable.dispose()
+                                verify(locationManager, times(1)).removeUpdates(eq(value))
+                            }
+                }
+    }
+
+    @Test
+    fun testRequestLocation_Success() {
         val expectedLocation = buildFakeLocation()
 
         //set provider enabled
@@ -136,7 +159,7 @@ class RxLocationManager2Test {
      * Test that request location throw [ProviderDisabledException] if provider disabled
      */
     @Test
-    fun requestLocation_ProviderDisabled() {
+    fun testRequestLocation_ProviderDisabled() {
         //set provider disabled
         setIsProviderEnabled(isEnabled = false)
 
@@ -150,7 +173,7 @@ class RxLocationManager2Test {
      * Test that request location throw [TimeoutException]
      */
     @Test
-    fun requestLocation_TimeOutError() {
+    fun testRequestLocation_TimeOutError() {
         //set provider enabled
         setIsProviderEnabled(isEnabled = true)
 
@@ -167,7 +190,7 @@ class RxLocationManager2Test {
      * Will return default location
      */
     @Test
-    fun builder_SuccessDefaultLocation() {
+    fun testBuilder_SuccessDefaultLocation() {
         val defaultLocation = buildFakeLocation()
 
         //set provider enabled
@@ -196,7 +219,7 @@ class RxLocationManager2Test {
      * Will emit no values
      */
     @Test
-    fun builder_SuccessEmpty() {
+    fun testBuilder_SuccessEmpty() {
         //set providers disabled
         setIsProviderEnabled(networkProvider, false)
         setIsProviderEnabled(LocationManager.GPS_PROVIDER, false)
@@ -220,7 +243,7 @@ class RxLocationManager2Test {
      * Will emit [Throwable]
      */
     @Test
-    fun builder_Error() {
+    fun testBuilder_Error() {
         setIsProviderEnabled(isEnabled = false)
 
         `when`(locationManager.getLastKnownLocation(eq(networkProvider)))
@@ -242,7 +265,7 @@ class RxLocationManager2Test {
      * Emit default value if only it was setted
      */
     @Test
-    fun builder_SuccessOnlyDefaultValue() {
+    fun testBuilder_SuccessOnlyDefaultValue() {
         val location = buildFakeLocation()
 
         defaultLocationRequestBuilder.setDefaultLocation(location)
