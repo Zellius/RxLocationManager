@@ -1,6 +1,6 @@
 RxLocationManager
 -----------------
-[![Android Arsenal](https://img.shields.io/badge/Android%20Arsenal-RxLocationManager-orange.svg?style=flat)](http://android-arsenal.com/details/1/3291) [![Build Status](https://travis-ci.org/Zellius/RxLocationManager.svg?branch=master)](https://travis-ci.org/Zellius/RxLocationManager) [![Coverage Status](https://coveralls.io/repos/github/Zellius/RxLocationManager/badge.svg?branch=master&bust=1)](https://coveralls.io/github/Zellius/RxLocationManager?branch=master)
+[![Android Arsenal](https://img.shields.io/badge/Android%20Arsenal-RxLocationManager-orange.svg?style=flat)](http://android-arsenal.com/details/1/3291) [![Build Status](https://travis-ci.org/Zellius/RxLocationManager.svg?branch=master)](https://travis-ci.org/Zellius/RxLocationManager) [![Coverage Status](https://coveralls.io/repos/github/Zellius/RxLocationManager/badge.svg?branch=master&bust=1)](https://coveralls.io/github/Zellius/RxLocationManager?branch=master) ![Android Version](https://img.shields.io/badge/android-9+-blue.svg)
 
 Android library that helps to get location using standart LocationManager and RxJava. It does not use the Google Play Services and it's easier to use.
 
@@ -50,29 +50,45 @@ locationRequestBuilder.addLastLocation(LocationManager.NETWORK_PROVIDER, new Loc
                 .create().subscribe();
 ```
 > **Note:** For default the LocationRequestBuilder will emit a default location in case of any exceptions. If you want to receive any exceptions you should use 
->```java
+```java
 locationRequestBuilder.setReturnDefaultLocationOnError(false)
 ```
 
 Download
 -----------------
+**Java**
+
+Maven:
+
 ```xml
 <dependency>
   <groupId>com.github.zellius</groupId>
   <artifactId>rxlocationmanager</artifactId>
-  <version>0.1.1</version>
-  <type>pom</type>
+  <version>0.1.2</version>
 </dependency>
 ```
-#####Gradle
 
-######Java
+Gradle:
+
 ```gradle
-compile 'com.github.zellius:rxlocationmanager:0.1.1'
+compile 'com.github.zellius:rxlocationmanager:0.1.2'
 ```
-######Kotlin
+**Kotlin**
+
+Maven:
+
+```xml
+<dependency>
+  <groupId>com.github.zellius</groupId>
+  <artifactId>rxlocationmanager.kotlin</artifactId>
+  <version>0.1.1</version>
+</dependency>
+```
+
+Gradle:
+
 ```gradle
-compile 'com.github.zellius:rxlocationmanager.kotlin:0.1.0'
+compile 'com.github.zellius:rxlocationmanager.kotlin:0.1.1'
 ```
 
 ## License
