@@ -5,8 +5,8 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Build
-import io.reactivex.Single
-import io.reactivex.SingleTransformer
+import io.reactivex.Maybe
+import io.reactivex.MaybeTransformer
 import io.reactivex.schedulers.Schedulers
 import org.junit.Before
 import org.junit.Test
@@ -253,7 +253,7 @@ class RxLocationManager2Test {
 
         defaultLocationRequestBuilder.addRequestLocation(networkProvider, LocationTime(5, TimeUnit.MILLISECONDS))
                 .addLastLocation(networkProvider)
-                .addRequestLocation(LocationManager.GPS_PROVIDER, transformer = SingleTransformer { Single.error { e } })
+                .addRequestLocation(LocationManager.GPS_PROVIDER, transformer = MaybeTransformer { Maybe.error { e } })
                 .setDefaultLocation(buildFakeLocation())
                 .create()
                 .test()

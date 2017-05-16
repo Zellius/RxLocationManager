@@ -2,7 +2,7 @@ package ru.solodovnikov.rxlocationmanager
 
 import android.location.Location
 
-abstract class BaseLocationRequestBuilder<out SINGLE, out MAYBE, in TRANSFORMER_SINGLE, in TRANSFORMER_MAYBE> internal constructor(protected val rxLocationManager: BaseRxLocationManager<SINGLE, MAYBE>) {
+abstract class BaseLocationRequestBuilder<out SINGLE, out MAYBE, in TRANSFORMER> internal constructor(protected val rxLocationManager: BaseRxLocationManager<SINGLE, MAYBE>) {
     protected var defaultLocation: Location? = null
         private set
 
@@ -20,7 +20,7 @@ abstract class BaseLocationRequestBuilder<out SINGLE, out MAYBE, in TRANSFORMER_
      */
     @JvmOverloads
     fun addRequestLocation(provider: String, timeOut: LocationTime? = null,
-                           transformer: TRANSFORMER_SINGLE? = null) = baseAddRequestLocation(provider, timeOut, transformer)
+                           transformer: TRANSFORMER? = null) = baseAddRequestLocation(provider, timeOut, transformer)
 
     /**
      * Get last location from specific [provider].
@@ -36,7 +36,7 @@ abstract class BaseLocationRequestBuilder<out SINGLE, out MAYBE, in TRANSFORMER_
      */
     @JvmOverloads
     fun addLastLocation(provider: String, howOldCanBe: LocationTime? = null,
-                        transformer: TRANSFORMER_MAYBE? = null) = baseAddLastLocation(provider, howOldCanBe, transformer)
+                        transformer: TRANSFORMER? = null) = baseAddLastLocation(provider, howOldCanBe, transformer)
 
     /**
      * Set location that will be returned in case of empty observable
@@ -49,10 +49,10 @@ abstract class BaseLocationRequestBuilder<out SINGLE, out MAYBE, in TRANSFORMER_
     }
 
     protected abstract fun baseAddRequestLocation(provider: String, timeOut: LocationTime? = null,
-                                                  transformer: TRANSFORMER_SINGLE? = null): BaseLocationRequestBuilder<SINGLE, MAYBE, TRANSFORMER_SINGLE, TRANSFORMER_MAYBE>
+                                                  transformer: TRANSFORMER? = null): BaseLocationRequestBuilder<SINGLE, MAYBE, TRANSFORMER>
 
     protected abstract fun baseAddLastLocation(provider: String, howOldCanBe: LocationTime? = null,
-                                               transformer: TRANSFORMER_MAYBE? = null): BaseLocationRequestBuilder<SINGLE, MAYBE, TRANSFORMER_SINGLE, TRANSFORMER_MAYBE>
+                                               transformer: TRANSFORMER? = null): BaseLocationRequestBuilder<SINGLE, MAYBE, TRANSFORMER>
 
     /**
      * Construct final observable.
