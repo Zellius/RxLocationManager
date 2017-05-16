@@ -17,12 +17,11 @@ Both rxJava and rxJava2 implementations have same interface but have some differ
 If you want to know how to use it on Java/Kotlin Android project with rxJava/rxJava2 support, please look at any **sample** projects.
 
 #### Get last known location
-**_rxJava1:_**
+###### rxJava1:
 * [Single](http://reactivex.io/RxJava/1.x/javadoc/rx/Single.html);
 * It will emit null if there is no last location;
 * It can emit ElderLocationException if location is too old.
-
-**_rxJava2:_**
+###### rxJava2:
 * [Maybe](http://reactivex.io/RxJava/2.x/javadoc/io/reactivex/Maybe.html);
 * It will not emit any value if there is no last location;
 * It can emit ElderLocationException if location is too old.
@@ -36,10 +35,9 @@ final RxLocationManager rxLocationManager = new RxLocationManager(this);
 rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime.OneHour()).subscribe();
 ```
 #### Request location
-**_rxJava1:_**
+###### rxJava1:
 * [Single](http://reactivex.io/RxJava/1.x/javadoc/rx/Single.html)
-
-**_rxJava2:_**
+###### rxJava2:
 * [Single](http://reactivex.io/RxJava/2.x/javadoc/io/reactivex/Single.html)
 
 ```java
@@ -51,11 +49,10 @@ final RxLocationManager rxLocationManager = new RxLocationManager(this);
 rxLocationManager.requestLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(10, TimeUnit.SECONDS)).subscribe();
 ```
 #### LocationRequestBuilder
-**_rxJava1:_**
+###### rxJava1:
 * [Single](http://reactivex.io/RxJava/1.x/javadoc/rx/Single.html)
 * It will emit _null_ if a result is empty and the defaultLocations is _null_ too.
-
-**_rxJava2:_**
+###### rxJava2:
 * [Maybe](http://reactivex.io/RxJava/2.x/javadoc/io/reactivex/Maybe.html);
 * It will not emit any value if a result is empty and the defaultLocations is _null_. 
 ```java
@@ -80,11 +77,9 @@ addLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(30, TimeUnit.
                     }
                 })
 ```
-### Download
-#### rxJava1
-
-Maven:
-
+## Download
+##### rxJava1
+###### Maven:
 ```xml
 <dependency>
   <groupId>com.github.zellius</groupId>
@@ -92,16 +87,12 @@ Maven:
   <version>x.y.z</version>
 </dependency>
 ```
-
-Gradle:
-
+###### Gradle:
 ```gradle
 compile 'com.github.zellius:rxlocationmanager.kotlin:x.y.z'
 ```
-#### rxJava2
-
-Maven:
-
+##### rxJava2
+###### Maven:
 ```xml
 <dependency>
   <groupId>com.github.zellius</groupId>
@@ -109,9 +100,7 @@ Maven:
   <version>x.y.z</version>
 </dependency>
 ```
-
-Gradle:
-
+###### Gradle:
 ```gradle
 compile 'com.github.zellius:rxlocationmanager.rxjava2:x.y.z'
 ```
