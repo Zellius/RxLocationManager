@@ -3,7 +3,7 @@
 
 Android library that helps to get location using standart LocationManager, RxJava (1 and 2) and Kotlin. It does not use the Google Play Services and it's easier to use.
 
-## Feautures
+## Features
  * The library have rxJava and rxJava2 implementations. It is writen in Kotlin, so you can use it in your projects with full language support.
  * Get last known device location from any location provider. You can specify how old Location can be. For example you want only those locations that have been received up to 30 minutes ago.
  * Request current device location. You can specify how long the request will continue. After that Observable will be unsubscribed automatically.
