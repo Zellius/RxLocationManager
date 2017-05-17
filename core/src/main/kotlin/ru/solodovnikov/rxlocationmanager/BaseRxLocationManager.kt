@@ -23,18 +23,9 @@ abstract class BaseRxLocationManager<out SINGLE, out MAYBE>(context: Context) {
      * @see ElderLocationException
      * @see ProviderHasNoLastLocationException
      */
-    fun getLastLocation(provider: String, howOldCanBe: LocationTime?): MAYBE =
+    @JvmOverloads
+    fun getLastLocation(provider: String, howOldCanBe: LocationTime? = null): MAYBE =
             baseGetLastLocation(provider, howOldCanBe)
-
-    /**
-     * Get last location from specific provider
-     *
-     * @param provider provider name
-     * @return observable that emit last known location
-     * @see ProviderHasNoLastLocationException
-     */
-    fun getLastLocation(provider: String): MAYBE =
-            baseGetLastLocation(provider, null)
 
     /**
      * Try to get current location by specific provider.
@@ -47,19 +38,9 @@ abstract class BaseRxLocationManager<out SINGLE, out MAYBE>(context: Context) {
      * @see TimeoutException
      * @see ProviderDisabledException
      */
-    fun requestLocation(provider: String, timeOut: LocationTime?): SINGLE
+    @JvmOverloads
+    fun requestLocation(provider: String, timeOut: LocationTime? = null): SINGLE
             = baseRequestLocation(provider, timeOut)
-
-    /**
-     * Try to get current location by specific provider.
-     * Observable will emit [ProviderDisabledException] if provider is disabled
-     *
-     * @param provider provider name
-     * @return observable that emit current location
-     * @see ProviderDisabledException
-     */
-    fun requestLocation(provider: String): SINGLE
-            = baseRequestLocation(provider, null)
 
     protected abstract fun baseGetLastLocation(provider: String, howOldCanBe: LocationTime?): MAYBE
 

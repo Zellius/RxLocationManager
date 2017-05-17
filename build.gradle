@@ -10,6 +10,9 @@ buildscript {
     repositories {
         jcenter()
         mavenCentral()
+        maven {
+            url = 'https://dl.bintray.com/kotlin/kotlin-dev/'
+        }
     }
 
     dependencies {
@@ -18,7 +21,8 @@ buildscript {
         classpath 'org.kt3k.gradle.plugin:coveralls-gradle-plugin:2.8.1'
         classpath 'com.github.dcendents:android-maven-gradle-plugin:1.5'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        classpath 'org.jetbrains.dokka:dokka-android-gradle-plugin:0.9.13'
+        //TODO https://github.com/Kotlin/dokka/issues/140
+        classpath 'org.jetbrains.dokka:dokka-android-gradle-plugin:0.9.14-eap-3'
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
@@ -60,7 +64,7 @@ def baseConfigure = { Project project ->
 
     project.dependencies {
         compile fileTree(dir: 'libs', include: ['*.jar'])
-        compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+        compile "org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version"
 
         //for tests
         testCompile 'junit:junit:4.12'
@@ -91,7 +95,7 @@ project(':rxlocationmanager-rxjava2') {
 
     apply from: '../publish.gradle'
 
-    ext.lib_name = 'RxLocationManager'
+    ext.lib_name = 'Rx2LocationManager'
     ext.lib_description = 'Android library that helps to get location using standart LocationManager and RxJava2'
 
     dependencies {
@@ -163,7 +167,7 @@ def prepareSample(Project p){
         compile 'com.android.support:design:25.3.1'
 
         if (isKotlinSample) {
-            compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+            compile "org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version"
         }
 
         if (isRxJava2Sample) {

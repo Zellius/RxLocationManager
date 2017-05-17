@@ -2,6 +2,9 @@ package ru.solodovnikov.rxlocationmanager
 
 import android.location.Location
 
+/**
+ * Abstract class used just to implement rxJava1 and rxJava2
+ */
 abstract class BaseLocationRequestBuilder<out SINGLE, out MAYBE, in TRANSFORMER> internal constructor(protected val rxLocationManager: BaseRxLocationManager<SINGLE, MAYBE>) {
     protected var defaultLocation: Location? = null
         private set
