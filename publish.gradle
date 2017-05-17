@@ -79,7 +79,7 @@ apply plugin: 'org.jetbrains.dokka-android'
 dokka {
     outputFormat = 'javadoc'
     //add lib javadoc and core javadoc
-    sourceDirs = files("$buildDir/generated/core/debug", android.sourceSets.main.java.srcDirs)
+    sourceDirs = files("$buildDir/generated/core/release", android.sourceSets.main.java.srcDirs)
     outputDirectory = "$buildDir/javadoc"
 }
 
@@ -92,7 +92,7 @@ task androidJavadocsJar(type: Jar, dependsOn: dokka) {
 task androidSourcesJar(type: Jar) {
     classifier 'sources'
     //add lib sources and core sources
-    from "$buildDir/generated/core/debug", android.sourceSets.main.java.srcDirs
+    from "$buildDir/generated/core/release", android.sourceSets.main.java.srcDirs
 }
 
 artifacts {
