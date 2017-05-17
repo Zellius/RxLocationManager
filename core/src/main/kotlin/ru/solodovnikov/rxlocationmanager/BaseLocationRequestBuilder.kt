@@ -19,8 +19,10 @@ abstract class BaseLocationRequestBuilder<out SINGLE, out MAYBE, in TRANSFORMER>
      * @see baseAddRequestLocation
      */
     @JvmOverloads
-    fun addRequestLocation(provider: String, timeOut: LocationTime? = null,
-                           transformer: TRANSFORMER? = null) = baseAddRequestLocation(provider, timeOut, transformer)
+    fun addRequestLocation(provider: String,
+                           timeOut: LocationTime? = null,
+                           transformer: TRANSFORMER? = null): BaseLocationRequestBuilder<SINGLE, MAYBE, TRANSFORMER> =
+            baseAddRequestLocation(provider, timeOut, transformer)
 
     /**
      * Get last location from specific [provider].
@@ -35,8 +37,10 @@ abstract class BaseLocationRequestBuilder<out SINGLE, out MAYBE, in TRANSFORMER>
      * @see baseAddLastLocation
      */
     @JvmOverloads
-    fun addLastLocation(provider: String, howOldCanBe: LocationTime? = null,
-                        transformer: TRANSFORMER? = null) = baseAddLastLocation(provider, howOldCanBe, transformer)
+    fun addLastLocation(provider: String,
+                        howOldCanBe: LocationTime? = null,
+                        transformer: TRANSFORMER? = null): BaseLocationRequestBuilder<SINGLE, MAYBE, TRANSFORMER> =
+            baseAddLastLocation(provider, howOldCanBe, transformer)
 
     /**
      * Set location that will be returned in case of empty observable
@@ -44,9 +48,10 @@ abstract class BaseLocationRequestBuilder<out SINGLE, out MAYBE, in TRANSFORMER>
      * @param defaultLocation default location
      * @return same builder
      */
-    fun setDefaultLocation(defaultLocation: Location?) = also {
-        this.defaultLocation = defaultLocation
-    }
+    fun setDefaultLocation(defaultLocation: Location?): BaseLocationRequestBuilder<SINGLE, MAYBE, TRANSFORMER> =
+            also {
+                this.defaultLocation = defaultLocation
+            }
 
     protected abstract fun baseAddRequestLocation(provider: String, timeOut: LocationTime? = null,
                                                   transformer: TRANSFORMER? = null): BaseLocationRequestBuilder<SINGLE, MAYBE, TRANSFORMER>

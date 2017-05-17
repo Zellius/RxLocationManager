@@ -1,15 +1,15 @@
+ext.lib_name = ''
+ext.lib_description = ''
+
+def lib_version = '1.0.0'
+def repository_url = 'https://github.com/Zellius/RxLocationManager'
+
 apply plugin: 'com.jfrog.bintray'
 apply plugin: 'com.github.dcendents.android-maven'
 
-group 'com.github.zellius'
-version library_version
-
-def lib_name = 'KotlinRxLocationManager'
-def lib_description = 'Android library written on Kotlin that helps to get location using standart LocationManager and RxJava'
-def repository_url = 'https://github.com/Zellius/RxLocationManager'
-
 afterEvaluate {
-    apply plugin: 'org.jetbrains.dokka-android'
+    group 'com.github.zellius'
+    version lib_version
 
     install {
         repositories.mavenInstaller {
@@ -61,22 +61,25 @@ afterEvaluate {
             issueTrackerUrl = "$repository_url/issues"
             vcsUrl = "${repository_url}.git"
 
-            labels = ['android', 'kotlin', 'location', 'rxJava', 'locationmanager']
+            labels = ['android', 'location', 'rxJava', 'locationmanager']
 
             githubRepo = "Zellius/RxLocationManager"
             githubReleaseNotesFile = 'README.md'
 
             version {
-                name = library_version
-                vcsTag = "v$library_version"
+                name = lib_version
+                vcsTag = "v$lib_version"
                 released = new Date()
             }
         }
     }
 
+    apply plugin: 'org.jetbrains.dokka-android'
+
     dokka {
         outputFormat = 'javadoc'
-        sourceDirs = files(android.sourceSets.main.java.srcDirs, file("$buildDir/generated/core/release"))
+        //add lib javadoc and core javadoc
+        sourceDirs = files("$buildDir/generated/core/debug", android.sourceSets.main.java.srcDirs)
         outputDirectory = "$buildDir/javadoc"
     }
 
@@ -85,9 +88,11 @@ afterEvaluate {
         from dokka.outputDirectory
     }
 
+
     task androidSourcesJar(type: Jar) {
         classifier 'sources'
-        from android.sourceSets.main.java.srcDirs, "$buildDir/generated/core/release"
+        //add lib sources and core sources
+        from "$buildDir/generated/core/debug", android.sourceSets.main.java.srcDirs
     }
 
     artifacts {
@@ -95,4 +100,3 @@ afterEvaluate {
         archives androidJavadocsJar
     }
 }
-

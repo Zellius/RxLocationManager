@@ -83,7 +83,7 @@ class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationM
 
     override fun baseAddRequestLocation(provider: String,
                                         timeOut: LocationTime?,
-                                        transformer: MaybeTransformer<Location, Location>?) =
+                                        transformer: MaybeTransformer<Location, Location>?): LocationRequestBuilder =
             rxLocationManager.requestLocation(provider, timeOut)
                     .toMaybe()
                     .compose { if (transformer != null) it.compose(transformer) else it }
@@ -101,7 +101,7 @@ class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationM
 
     override fun baseAddLastLocation(provider: String,
                                      howOldCanBe: LocationTime?,
-                                     transformer: MaybeTransformer<Location, Location>?) =
+                                     transformer: MaybeTransformer<Location, Location>?): LocationRequestBuilder =
             rxLocationManager.getLastLocation(provider, howOldCanBe)
                     .compose { if (transformer != null) it.compose(transformer) else it }
                     .toObservable()
