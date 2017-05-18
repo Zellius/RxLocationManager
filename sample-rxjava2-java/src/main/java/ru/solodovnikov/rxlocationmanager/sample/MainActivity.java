@@ -18,9 +18,9 @@ import io.reactivex.Single;
 import io.reactivex.annotations.NonNull;
 import io.reactivex.functions.Action;
 import io.reactivex.functions.Consumer;
-import ru.solodovnikov.rxlocationmanager.LocationRequestBuilder;
-import ru.solodovnikov.rxlocationmanager.LocationTime;
-import ru.solodovnikov.rxlocationmanager.RxLocationManager;
+import ru.solodovnikov.rx2locationmanager.LocationRequestBuilder;
+import ru.solodovnikov.rx2locationmanager.LocationTime;
+import ru.solodovnikov.rx2locationmanager.RxLocationManager;
 
 public class MainActivity extends AppCompatActivity {
     private RxLocationManager rxLocationManager;

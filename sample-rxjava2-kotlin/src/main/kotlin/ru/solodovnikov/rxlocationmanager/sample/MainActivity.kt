@@ -11,9 +11,9 @@ import android.view.Menu
 import android.view.MenuItem
 import io.reactivex.Maybe
 import io.reactivex.Single
-import ru.solodovnikov.rxlocationmanager.LocationRequestBuilder
-import ru.solodovnikov.rxlocationmanager.LocationTime
-import ru.solodovnikov.rxlocationmanager.RxLocationManager
+import ru.solodovnikov.rx2locationmanager.LocationRequestBuilder
+import ru.solodovnikov.rx2locationmanager.LocationTime
+import ru.solodovnikov.rx2locationmanager.RxLocationManager
 import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {

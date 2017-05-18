@@ -37,6 +37,13 @@ def includeCoreClasses = { Project p ->
         def mergeTask = p.tasks.create(name: "merge${var.name.capitalize()}CoreClasses", type: Copy) {
             from(project(':core').android.sourceSets.main.java.srcDirs)
             into outputDir
+            filter {
+                if (it == 'package ru.solodovnikov.rxlocationmanager') {
+                    "package ${var.applicationId}"
+                } else {
+                    it
+                }
+            }
         }
         var.registerJavaGeneratingTask(mergeTask, outputDir)
     }
