@@ -68,7 +68,7 @@ locationRequestBuilder.addLastLocation(LocationManager.NETWORK_PROVIDER, new Loc
                 .create()
                 .subscribe();
 ```
-> **Note:** By default the LocationRequestBuilder will ignore any library exceptions, but will throw any other. You can use a transformer to change it.
+> **Note:** By default the LocationRequestBuilder will ignore any library exceptions, but will throw any other. You can use a transformer to change it. The code below will ignore any error.
 ```java
 addLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(30, TimeUnit.MINUTES), new MaybeTransformer<Location, Location>() {
                     @Override
@@ -83,13 +83,13 @@ addLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(30, TimeUnit.
 ```xml
 <dependency>
   <groupId>com.github.zellius</groupId>
-  <artifactId>rxlocationmanager.kotlin</artifactId>
+  <artifactId>rxlocationmanager</artifactId>
   <version>x.y.z</version>
 </dependency>
 ```
 ###### Gradle:
 ```gradle
-compile 'com.github.zellius:rxlocationmanager.kotlin:x.y.z'
+compile 'com.github.zellius:rxlocationmanager:x.y.z'
 ```
 ##### rxJava2
 ###### Maven:
