@@ -49,6 +49,8 @@ project(':core') {
 project(':rxlocationmanager-rxjava2') {
     apply from: '../base_project.gradle'
 
+    apply from: '../coverage.gradle'
+
     apply from: '../publish.gradle'
 
     ext.lib_name = 'Rx2LocationManager'
@@ -64,6 +66,8 @@ project(':rxlocationmanager-rxjava2') {
 
 project(':rxlocationmanager.kotlin') {
     apply from: '../base_project.gradle'
+
+    apply from: '../coverage.gradle'
 
     apply from: '../publish.gradle'
 

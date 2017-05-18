@@ -34,28 +34,3 @@ dependencies {
     testCompile 'org.robolectric:robolectric:3.3.2'
     testCompile 'org.mockito:mockito-core:2.7.22'
 }
-
-apply plugin: 'jacoco'
-
-task jacocoTestReport(type: JacocoReport, dependsOn: "testDebugUnitTest") {
-    group = "Reporting"
-    description = "Generate Jacoco coverage reports"
-
-    classDirectories = fileTree(
-            dir: "$buildDir/intermediates/classes",
-            excludes: ['**/R.class',
-                       '**/R$*.class',
-                       '**/*$ViewInjector*.*',
-                       '**/BuildConfig.*',
-                       '**/Manifest*.*']
-    )
-
-    additionalSourceDirs = files(android.sourceSets.main.java.srcDirs)
-    sourceDirectories = files(android.sourceSets.main.java.srcDirs)
-    executionData = files("$buildDir/jacoco/testDebugUnitTest.exec")
-
-    reports {
-        xml.enabled = true
-        html.enabled = true
-    }
-}
