@@ -64,7 +64,7 @@ project(':rxlocationmanager-rxjava2') {
     includeCoreClasses(it)
 }
 
-project(':rxlocationmanager.kotlin') {
+project(':rxlocationmanager') {
     apply from: '../base_project.gradle'
 
     apply from: '../coverage.gradle'
@@ -133,7 +133,7 @@ def prepareSample(Project p) {
         if (isRxJava2Sample) {
             compile project(':rxlocationmanager-rxjava2')
         } else {
-            compile project(':rxlocationmanager.kotlin')
+            compile project(':rxlocationmanager')
         }
     }
 }
@@ -142,7 +142,7 @@ task clean(type: Delete) {
     delete rootProject.buildDir
 }
 
-def reportingSubprojects = [project(':rxlocationmanager-rxjava2'), project(':rxlocationmanager.kotlin')]
+def reportingSubprojects = [project(':rxlocationmanager-rxjava2'), project(':rxlocationmanager')]
 
 apply plugin: 'jacoco'
 

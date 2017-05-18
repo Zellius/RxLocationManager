@@ -2,6 +2,6 @@ include ':core',
         ':rxlocationmanager-rxjava2',
         ':sample-rxjava2-kotlin',
         ':sample-rxjava2-java',
-        ':rxlocationmanager.kotlin',
+        ':rxlocationmanager',
         ':sample-rxjava-kotlin',
         ':sample-rxjava-java'
