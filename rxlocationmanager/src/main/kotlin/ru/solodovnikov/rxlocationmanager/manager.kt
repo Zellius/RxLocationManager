@@ -11,6 +11,7 @@ import rx.Scheduler
 import rx.Single
 import rx.android.schedulers.AndroidSchedulers
 import rx.functions.Action1
+import java.util.NoSuchElementException
 import java.util.concurrent.TimeoutException
 
 /**
@@ -99,7 +100,7 @@ class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationM
                     .toObservable()
                     .onErrorResumeNext {
                         when (it) {
-                            is TimeoutException, is ProviderDisabledException -> Observable.empty<Location>()
+                            is TimeoutException, is ProviderDisabledException, is NoSuchElementException -> Observable.empty<Location>()
                             else -> Observable.error<Location>(it)
                         }
                     }
@@ -114,10 +115,9 @@ class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationM
             rxLocationManager.getLastLocation(provider, howOldCanBe)
                     .compose { if (transformer != null) it.compose(transformer) else it }
                     .toObservable()
-                    .filter { it != null }
                     .onErrorResumeNext {
                         when (it) {
-                            is ElderLocationException -> Observable.empty<Location>()
+                            is ElderLocationException, is NoSuchElementException -> Observable.empty<Location>()
                             else -> Observable.error<Location>(it)
                         }
                     }
@@ -145,10 +145,10 @@ open class IgnoreErrorTransformer @JvmOverloads constructor(private val errorsTo
     override fun call(upstream: Single<Location>): Single<Location> {
         return upstream.onErrorResumeNext { t: Throwable ->
             if (errorsToIgnore == null || errorsToIgnore.isEmpty()) {
-                Single.just(null)
+                Observable.empty<Location>().toSingle()
             } else {
                 if (errorsToIgnore.contains(t.javaClass)) {
-                    Single.just(null)
+                    Observable.empty<Location>().toSingle()
                 } else {
                     Single.error(t)
                 }

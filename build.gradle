@@ -34,17 +34,19 @@ allprojects {
 def includeCoreClasses = { Project p ->
     p.android.libraryVariants.all { variant ->
         def outputDir = p.file("$p.buildDir/generated/core/${variant.dirName}")
+        def packageName = variant.generateBuildConfig.appPackageName
+
         def mergeTask = p.tasks.create(name: "merge${variant.name.capitalize()}CoreClasses", type: Copy) {
             from(project(':core').android.sourceSets.main.java.srcDirs) {
                 filter { String line ->
                     if (line == 'package ru.solodovnikov.rxlocationmanager') {
-                        "package ${variant.applicationId}"
+                        "package $packageName"
                     } else {
                         line
                     }
                 }
                 eachFile {
-                    path = "${variant.generateBuildConfig.appPackageName.replaceAll('\\.', '/')}/$name"
+                    path = "${packageName.replaceAll('\\.', '/')}/$name"
                 }
             }
             into outputDir
