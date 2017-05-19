@@ -135,3 +135,29 @@ class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationM
             resultObservable.firstOrDefault(defaultLocation)
                     .toSingle()
 }
+
+/**
+ * Use it to ignore any described error type.
+ *
+ * @param errorsToIgnore if null or empty, then ignore all errors, otherwise just described types.
+ */
+class IgnoreErrorTransformer(private val errorsToIgnore: List<Class<out Throwable>>? = null) : Single.Transformer<Location, Location> {
+    /**
+     * Ignore all errors
+     */
+    constructor() : this(null)
+
+    override fun call(upstream: Single<Location>): Single<Location> {
+        return upstream.onErrorResumeNext { t: Throwable ->
+            if (errorsToIgnore == null || errorsToIgnore.isEmpty()) {
+                Single.just(null)
+            } else {
+                if (errorsToIgnore.contains(t.javaClass)) {
+                    Single.just(null)
+                } else {
+                    Single.error(t)
+                }
+            }
+        }
+    }
+}

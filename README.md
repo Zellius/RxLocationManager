@@ -70,12 +70,7 @@ locationRequestBuilder.addLastLocation(LocationManager.NETWORK_PROVIDER, new Loc
 ```
 > **Note:** By default the LocationRequestBuilder will ignore any library exceptions, but will throw any other. You can use a transformer to change it. The code below will ignore any error.
 ```java
-addLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(30, TimeUnit.MINUTES), new MaybeTransformer<Location, Location>() {
-                    @Override
-                    public MaybeSource<Location> apply(@NonNull Maybe<Location> upstream) {
-                        return upstream.onErrorResumeNext(Maybe.<Location>empty());
-                    }
-                })
+addLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(30, TimeUnit.MINUTES), new IgnoreErrorTransformer(null))
 ```
 ## Download
 ##### rxJava1

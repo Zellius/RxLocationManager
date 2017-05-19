@@ -126,3 +126,29 @@ class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationM
                     .compose { if (defaultLocation != null) it.defaultIfEmpty(defaultLocation) else it }
 }
 
+/**
+ * Use it to ignore any described error type.
+ *
+ * @param errorsToIgnore if null or empty, then ignore all errors, otherwise just described types.
+ */
+class IgnoreErrorTransformer(private val errorsToIgnore: List<Class<out Throwable>>? = null) : MaybeTransformer<Location, Location> {
+    /**
+     * Ignore all errors
+     */
+    constructor() : this(null)
+
+    override fun apply(upstream: Maybe<Location>): MaybeSource<Location> {
+        return upstream.onErrorResumeNext { t: Throwable ->
+            if (errorsToIgnore == null || errorsToIgnore.isEmpty()) {
+                Maybe.empty<Location>()
+            } else {
+                if (errorsToIgnore.contains(t.javaClass)) {
+                    Maybe.empty<Location>()
+                } else {
+                    Maybe.error<Location>(t)
+                }
+            }
+        }
+    }
+}
+

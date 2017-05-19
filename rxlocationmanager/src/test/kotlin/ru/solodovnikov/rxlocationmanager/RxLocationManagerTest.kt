@@ -17,6 +17,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import rx.Single
 import rx.schedulers.Schedulers
+import java.lang.Throwable
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
@@ -280,7 +281,36 @@ class RxLocationManagerTest {
                 .thenThrow(ex)
 
         defaultLocationRequestBuilder.addRequestLocation(networkProvider, LocationTime(5, TimeUnit.MILLISECONDS))
-                .addLastLocation(networkProvider, transformer = Single.Transformer { it.onErrorResumeNext { t: Throwable? -> if (t == ex) Single.just(null) else Single.error(t) } })
+                .addLastLocation(networkProvider, transformer = IgnoreErrorTransformer(listOf(SecurityException::class.java)))
+                .addRequestLocation(LocationManager.GPS_PROVIDER)
+                .setDefaultLocation(location)
+                .create()
+                .test()
+                .awaitTerminalEvent()
+                .assertNoErrors()
+                .assertCompleted()
+                .assertValue(location)
+    }
+
+    /**
+     * * Request location - [ProviderDisabledException]
+     * * Last Location - [SecurityException] with transformer
+     * * Request location - [Throwable]
+     *
+     * Will emit defaultLocation
+     */
+    @Test
+    fun testBuilder_ErrorHandlingAll() {
+        setIsProviderEnabled(isEnabled = false)
+
+        val location = buildFakeLocation()
+        val ex = SecurityException()
+
+        `when`(locationManager.getLastKnownLocation(eq(networkProvider)))
+                .thenThrow(ex)
+
+        defaultLocationRequestBuilder.addRequestLocation(networkProvider, LocationTime(5, TimeUnit.MILLISECONDS))
+                .addLastLocation(networkProvider, transformer = IgnoreErrorTransformer())
                 .addRequestLocation(LocationManager.GPS_PROVIDER)
                 .setDefaultLocation(location)
                 .create()

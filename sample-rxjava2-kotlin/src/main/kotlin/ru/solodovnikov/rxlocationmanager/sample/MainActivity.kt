@@ -11,6 +11,7 @@ import android.view.Menu
 import android.view.MenuItem
 import io.reactivex.Maybe
 import io.reactivex.Single
+import ru.solodovnikov.rx2locationmanager.IgnoreErrorTransformer
 import ru.solodovnikov.rx2locationmanager.LocationRequestBuilder
 import ru.solodovnikov.rx2locationmanager.LocationTime
 import ru.solodovnikov.rx2locationmanager.RxLocationManager
@@ -52,6 +53,10 @@ class MainActivity : AppCompatActivity() {
                 requestBuild()
                 return true
             }
+            R.id.complicated_request_location_ignore_error -> {
+                requestBuildIgnoreSecurityError()
+                return true
+            }
             else -> {
                 return super.onOptionsItemSelected(item)
             }
@@ -77,6 +82,17 @@ class MainActivity : AppCompatActivity() {
         locationRequestBuilder
                 .addLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(30, TimeUnit.MINUTES))
                 .addRequestLocation(LocationManager.NETWORK_PROVIDER, LocationTime(15, TimeUnit.SECONDS))
+                .setDefaultLocation(Location(LocationManager.PASSIVE_PROVIDER))
+                .create()
+                .testSubscribe("requestBuild")
+    }
+
+    private fun requestBuildIgnoreSecurityError() {
+        val ignoreError = IgnoreErrorTransformer(listOf(SecurityException::class.java))
+
+        locationRequestBuilder
+                .addLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(30, TimeUnit.MINUTES), ignoreError)
+                .addRequestLocation(LocationManager.NETWORK_PROVIDER, LocationTime(15, TimeUnit.SECONDS), ignoreError)
                 .setDefaultLocation(Location(LocationManager.PASSIVE_PROVIDER))
                 .create()
                 .testSubscribe("requestBuild")

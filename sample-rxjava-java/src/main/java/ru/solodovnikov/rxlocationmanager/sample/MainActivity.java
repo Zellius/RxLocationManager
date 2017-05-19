@@ -11,8 +11,10 @@ import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 
+import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
+import ru.solodovnikov.rxlocationmanager.IgnoreErrorTransformer;
 import ru.solodovnikov.rxlocationmanager.LocationRequestBuilder;
 import ru.solodovnikov.rxlocationmanager.LocationTime;
 import ru.solodovnikov.rxlocationmanager.RxLocationManager;
@@ -59,6 +61,9 @@ public class MainActivity extends AppCompatActivity {
             case R.id.complicated_request_location:
                 requestBuild();
                 return true;
+            case R.id.complicated_request_location_ignore_error:
+                requestBuildIgnoreSecurityError();
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -80,6 +85,19 @@ public class MainActivity extends AppCompatActivity {
         final Single<Location> single = locationRequestBuilder
                 .addLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(30, TimeUnit.MINUTES))
                 .addRequestLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(15, TimeUnit.SECONDS))
+                .setDefaultLocation(new Location(LocationManager.PASSIVE_PROVIDER))
+                .create();
+
+        testSubscribe(single, "requestBuild");
+    }
+
+    private void requestBuildIgnoreSecurityError() {
+        final Single.Transformer<Location, Location> ignoreError =
+                new IgnoreErrorTransformer(Collections.singletonList(SecurityException.class));
+
+        final Single<Location> single = locationRequestBuilder
+                .addLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(30, TimeUnit.MINUTES), ignoreError)
+                .addRequestLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(15, TimeUnit.SECONDS), ignoreError)
                 .setDefaultLocation(new Location(LocationManager.PASSIVE_PROVIDER))
                 .create();
 

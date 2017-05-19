@@ -17,4 +17,8 @@
         android:id="@+id/complicated_request_location"
         android:title="@string/complicated_request_location"
         app:showAsAction="never" />
+    <item
+        android:id="@+id/complicated_request_location_ignore_error"
+        android:title="@string/complicated_request_location"
+        app:showAsAction="never" />
 </menu>
