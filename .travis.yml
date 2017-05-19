@@ -1,10 +1,9 @@
 language: android
-jdk: oraclejdk8
 android:
   components:
     - tools
     - platform-tools
-    - build-tools-25.0.2
+    - build-tools-25.0.3
     - android-25
     - extra-android-m2repository
 before_install:
@@ -18,4 +17,4 @@ branches:
     - master
     - dev
 after_success:
- - ./gradlew clean jacocoRootReport coveralls
+ - ./gradlew clean assemble jacocoRootReport coveralls
