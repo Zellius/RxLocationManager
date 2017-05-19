@@ -44,7 +44,7 @@ def includeCoreClasses = { Project p ->
                     }
                 }
                 eachFile {
-                    path = "${variant.applicationId.replaceAll('\\.', '/')}/$name"
+                    path = "${variant.generateBuildConfig.appPackageName.replaceAll('\\.', '/')}/$name"
                 }
             }
             into outputDir
