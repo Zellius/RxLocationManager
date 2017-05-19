@@ -32,20 +32,24 @@ allprojects {
 
 //copy core classes to the project gen folder
 def includeCoreClasses = { Project p ->
-    p.android.libraryVariants.all { var ->
-        def outputDir = p.file("$p.buildDir/generated/core/${var.dirName}")
-        def mergeTask = p.tasks.create(name: "merge${var.name.capitalize()}CoreClasses", type: Copy) {
-            from(project(':core').android.sourceSets.main.java.srcDirs)
-            into outputDir
-            filter {
-                if (it == 'package ru.solodovnikov.rxlocationmanager') {
-                    "package ${var.applicationId}"
-                } else {
-                    it
+    p.android.libraryVariants.all { variant ->
+        def outputDir = p.file("$p.buildDir/generated/core/${variant.dirName}")
+        def mergeTask = p.tasks.create(name: "merge${variant.name.capitalize()}CoreClasses", type: Copy) {
+            from(project(':core').android.sourceSets.main.java.srcDirs) {
+                filter { String line ->
+                    if (line == 'package ru.solodovnikov.rxlocationmanager') {
+                        "package ${variant.applicationId}"
+                    } else {
+                        line
+                    }
+                }
+                eachFile {
+                    path = "${variant.applicationId.replaceAll('\\.', '/')}/$name"
                 }
             }
+            into outputDir
         }
-        var.registerJavaGeneratingTask(mergeTask, outputDir)
+        variant.registerJavaGeneratingTask mergeTask, outputDir
     }
 }
 
