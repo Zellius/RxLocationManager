@@ -91,7 +91,7 @@ compile 'com.github.zellius:rxlocationmanager:x.y.z'
 ```xml
 <dependency>
   <groupId>com.github.zellius</groupId>
-  <artifactId>rxlocationmanager.rxjava2</artifactId>
+  <artifactId>rxlocationmanager-rxjava2</artifactId>
   <version>x.y.z</version>
 </dependency>
 ```
