@@ -1,7 +1,7 @@
 # RxLocationManager
 [![Android Arsenal](https://img.shields.io/badge/Android%20Arsenal-RxLocationManager-orange.svg?style=flat)](http://android-arsenal.com/details/1/3291) [![Build Status](https://travis-ci.org/Zellius/RxLocationManager.svg?branch=master)](https://travis-ci.org/Zellius/RxLocationManager) [![Coverage Status](https://coveralls.io/repos/github/Zellius/RxLocationManager/badge.svg?branch=master&bust=1)](https://coveralls.io/github/Zellius/RxLocationManager?branch=master) ![Android Version](https://img.shields.io/badge/android-9+-blue.svg)
 
-Android library that helps to get location using standart LocationManager, RxJava (1 and 2) and Kotlin. It does not use the Google Play Services and it's easier to use.
+Android library that helps to get location using standart LocationManager, [RxJava](https://github.com/ReactiveX/RxJava) (1 and 2) and [Kotlin](https://kotlinlang.org/). It does not use the Google Play Services and it's easier to use.
 
 ## Features
  * The library have rxJava and rxJava2 implementations. It is writen in Kotlin, so you can use it in your projects with full language support.
@@ -110,7 +110,7 @@ Add the necessary permissions to your app manifest.xml.
 ```
 The MIT License (MIT)
 
-Copyright (c) 2016 Sergey Solodovnikov
+Copyright (c) 2017 Sergey Solodovnikov
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
