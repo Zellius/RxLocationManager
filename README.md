@@ -97,9 +97,14 @@ compile 'com.github.zellius:rxlocationmanager:x.y.z'
 ```
 ###### Gradle:
 ```gradle
-compile 'com.github.zellius:rxlocationmanager.rxjava2:x.y.z'
+compile 'com.github.zellius:rxlocationmanager-rxjava2:x.y.z'
 ```
-
+## Setup
+Add the necessary permissions to your app manifest.xml.
+```xml
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+```
 ## License
 
 ```
