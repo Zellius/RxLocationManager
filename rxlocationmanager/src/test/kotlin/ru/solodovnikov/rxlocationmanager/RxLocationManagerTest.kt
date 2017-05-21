@@ -15,9 +15,7 @@ import org.mockito.Mockito.doAnswer
 import org.mockito.MockitoAnnotations
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import rx.Single
 import rx.schedulers.Schedulers
-import java.lang.Throwable
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
@@ -211,6 +209,31 @@ class RxLocationManagerTest {
                 .assertCompleted()
                 .assertValueCount(1)
                 .assertValue(defaultLocation)
+    }
+
+    /**
+     * * Request location - TimeOut
+     * * Last Location - null. But null is valid value
+     *
+     * Will return null
+     */
+    @Test
+    fun testBuilder_SuccessValidNullValue() {
+        //set provider enabled
+        setIsProviderEnabled(isEnabled = true)
+
+        `when`(locationManager.getLastKnownLocation(eq(networkProvider)))
+                .thenReturn(null)
+
+        defaultLocationRequestBuilder.addRequestLocation(networkProvider, LocationTime(5, TimeUnit.MILLISECONDS), false)
+                .addLastLocation(networkProvider, isNullValid = true)
+                .setDefaultLocation(buildFakeLocation())
+                .create()
+                .test()
+                .awaitTerminalEvent()
+                .assertNoErrors()
+                .assertCompleted()
+                .assertValue(null)
     }
 
     /**

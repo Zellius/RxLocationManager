@@ -11,7 +11,7 @@ import rx.Scheduler
 import rx.Single
 import rx.android.schedulers.AndroidSchedulers
 import rx.functions.Action1
-import java.util.NoSuchElementException
+import java.util.*
 import java.util.concurrent.TimeoutException
 
 /**
@@ -87,44 +87,21 @@ class RxLocationManager internal constructor(context: Context,
 /**
  * Implementation of [BaseLocationRequestBuilder] based on rxJava1
  */
-class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationManager) : BaseLocationRequestBuilder<Single<Location>, Single<Location>, Single.Transformer<Location, Location>>(rxLocationManager) {
+class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationManager) : BaseLocationRequestBuilder<Single<Location>, Single<Location>, Single.Transformer<Location, Location>, LocationRequestBuilder>(rxLocationManager) {
     constructor(context: Context) : this(RxLocationManager(context))
 
     private var resultObservable = Observable.empty<Location>()
 
     override fun baseAddRequestLocation(provider: String,
                                         timeOut: LocationTime?,
-                                        transformer: Single.Transformer<Location, Location>?) =
-            rxLocationManager.requestLocation(provider, timeOut)
-                    .compose { if (transformer != null) it.compose(transformer) else it }
-                    .toObservable()
-                    .onErrorResumeNext {
-                        when (it) {
-                            is TimeoutException, is ProviderDisabledException, is NoSuchElementException -> Observable.empty<Location>()
-                            else -> Observable.error<Location>(it)
-                        }
-                    }
-                    .let {
-                        resultObservable = resultObservable.concatWith(it)
-                        this
-                    }
+                                        transformer: Single.Transformer<Location, Location>?): LocationRequestBuilder =
+            addRequestLocation(provider, timeOut, false, transformer)
+
 
     override fun baseAddLastLocation(provider: String,
                                      howOldCanBe: LocationTime?,
                                      transformer: Single.Transformer<Location, Location>?) =
-            rxLocationManager.getLastLocation(provider, howOldCanBe)
-                    .compose { if (transformer != null) it.compose(transformer) else it }
-                    .toObservable()
-                    .onErrorResumeNext {
-                        when (it) {
-                            is ElderLocationException, is NoSuchElementException -> Observable.empty<Location>()
-                            else -> Observable.error<Location>(it)
-                        }
-                    }
-                    .let {
-                        resultObservable = resultObservable.concatWith(it)
-                        this
-                    }
+            addLastLocation(provider, howOldCanBe, false, transformer)
 
     /**
      * Construct final observable.
@@ -134,6 +111,72 @@ class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationM
     override fun create(): Single<Location> =
             resultObservable.firstOrDefault(defaultLocation)
                     .toSingle()
+
+    /**
+     * Try to get current location by specific [provider].
+     * It will ignore any library exceptions (e.g [ProviderDisabledException]).
+     * But will fall if any other exception will occur. This can be changed via [transformer].
+     *
+     * @param provider    provider name
+     * @param timeOut     request timeout
+     * @param isNullValid if true, then this request can emit null value
+     * @param transformer extra transformer
+     *
+     * @return same builder
+     * @see baseAddRequestLocation
+     */
+    @JvmOverloads
+    fun addRequestLocation(provider: String,
+                           timeOut: LocationTime? = null,
+                           isNullValid: Boolean = false,
+                           transformer: Single.Transformer<Location, Location>? = null): LocationRequestBuilder =
+            rxLocationManager.requestLocation(provider, timeOut)
+                    .compose { if (transformer != null) it.compose(transformer) else it }
+                    .toObservable()
+                    .onErrorResumeNext {
+                        when (it) {
+                            is TimeoutException, is ProviderDisabledException, is NoSuchElementException -> Observable.empty<Location>()
+                            else -> Observable.error<Location>(it)
+                        }
+                    }
+                    .flatMap { if (it == null && !isNullValid) Observable.empty() else Observable.just(it) }
+                    .let {
+                        resultObservable = resultObservable.concatWith(it)
+                        this
+                    }
+
+    /**
+     * Get last location from specific [provider].
+     * It will ignore any library exceptions (e.g [ElderLocationException]).
+     * But will fall if any other exception will occur. This can be changed via [transformer].
+     *
+     * @param provider    provider name
+     * @param howOldCanBe optional. How old a location can be
+     * @param isNullValid if true, then this request can emit null value
+     * @param transformer optional extra transformer
+     *
+     * @return same builder
+     * @see baseAddLastLocation
+     */
+    @JvmOverloads
+    fun addLastLocation(provider: String,
+                        howOldCanBe: LocationTime? = null,
+                        isNullValid: Boolean = false,
+                        transformer: Single.Transformer<Location, Location>? = null): LocationRequestBuilder =
+            rxLocationManager.getLastLocation(provider, howOldCanBe)
+                    .compose { if (transformer != null) it.compose(transformer) else it }
+                    .toObservable()
+                    .onErrorResumeNext {
+                        when (it) {
+                            is ElderLocationException, is NoSuchElementException -> Observable.empty<Location>()
+                            else -> Observable.error<Location>(it)
+                        }
+                    }
+                    .flatMap { if (it == null && !isNullValid) Observable.empty() else Observable.just(it) }
+                    .let {
+                        resultObservable = resultObservable.concatWith(it)
+                        this
+                    }
 }
 
 /**

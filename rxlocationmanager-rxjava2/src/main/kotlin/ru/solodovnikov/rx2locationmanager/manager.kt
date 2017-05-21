@@ -76,7 +76,7 @@ class RxLocationManager internal constructor(context: Context,
 /**
  * Implementation of [BaseLocationRequestBuilder] based on rxJava2
  */
-class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationManager) : BaseLocationRequestBuilder<Single<Location>, Maybe<Location>, MaybeTransformer<Location, Location>>(rxLocationManager) {
+class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationManager) : BaseLocationRequestBuilder<Single<Location>, Maybe<Location>, MaybeTransformer<Location, Location>, LocationRequestBuilder>(rxLocationManager) {
     constructor(context: Context) : this(RxLocationManager(context))
 
     private var resultObservable = Observable.empty<Location>()
