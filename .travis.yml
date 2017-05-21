@@ -10,7 +10,7 @@ android:
 before_install:
  - chmod +x gradlew
 script:
- - ./gradlew clean build -PdisablePreDex --continue --stacktrace
+ - ./gradlew clean build jacocoRootReport -PdisablePreDex --continue --stacktrace
 env:
  - GRADLE_OPTS="-Xmx512m -XX:MaxPermSize=512m"
 branches:
@@ -18,4 +18,4 @@ branches:
     - master
     - dev
 after_success:
- - ./gradlew clean assemble jacocoRootReport coveralls
+ - ./gradlew coveralls
