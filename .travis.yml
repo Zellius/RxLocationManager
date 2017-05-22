@@ -26,5 +26,5 @@ deploy:
   script: ./gradlew clean build :rxlocationmanager:bintrayUpload -PdryRun=true
   on:
    tags: true
-   all_branches: true
+   branch: 0.0.0
 #   condition: $TRAVIS_TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+
