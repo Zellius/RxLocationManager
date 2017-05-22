@@ -13,12 +13,6 @@ script:
  - ./gradlew clean build -PdisablePreDex --continue --stacktrace
 env:
  - GRADLE_OPTS="-Xmx512m -XX:MaxPermSize=512m"
-branches:
-#  only:
-#    - master
-#    - dev
-  except:
-    - 0.0.0
 after_success:
  - ./gradlew clean jacocoRootReport coveralls
 deploy:
@@ -26,5 +20,11 @@ deploy:
   script: ./gradlew clean build :rxlocationmanager:bintrayUpload -PdryRun=true
   on:
    tags: false
-   branch: 0.0.0
+   all_branches: true
+branches:
+#  only:
+#    - master
+#    - dev
+  except:
+    - 0.0.0
 #   condition: $TRAVIS_TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+
