@@ -17,6 +17,8 @@ branches:
   only:
     - master
     - dev
+  except:
+    - /^*-v[0-9]/
 after_success:
  - ./gradlew clean jacocoRootReport coveralls
 deploy:
