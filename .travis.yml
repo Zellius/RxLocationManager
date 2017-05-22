@@ -13,12 +13,12 @@ script:
  - ./gradlew clean build -PdisablePreDex --continue --stacktrace
 env:
  - GRADLE_OPTS="-Xmx512m -XX:MaxPermSize=512m"
-branches:
+#branches:
 #  only:
 #    - master
 #    - dev
-  except:
-    - 0.0.0
+#  except:
+#    - 0.0.0
 after_success:
  - ./gradlew clean jacocoRootReport coveralls
 deploy:
