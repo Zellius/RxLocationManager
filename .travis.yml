@@ -10,12 +10,26 @@ android:
 before_install:
  - chmod +x gradlew
 script:
- - ./gradlew clean build jacocoRootReport -PdisablePreDex --continue --stacktrace
+ - ./gradlew clean build jacocoRootReport coveralls -PdisablePreDex --continue --stacktrace
 env:
  - GRADLE_OPTS="-Xmx512m -XX:MaxPermSize=512m"
 branches:
   only:
     - master
     - dev
-after_success:
- - ./gradlew coveralls
+    - /^v\d+\.\d+\.\d+$/
+before_cache:
+  - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
+  - rm -fr $HOME/.gradle/caches/*/plugin-resolution/
+cache:
+  directories:
+    - $HOME/.gradle/caches/
+    - $HOME/.gradle/wrapper/
+    - $HOME/.android/build-cache
+deploy:
+  provider: script
+  script: ./gradlew :rxlocationmanager:bintrayUpload :rxlocationmanager-rxjava2:bintrayUpload -PdryRun=false
+  skip_cleanup: true
+  on:
+    tags: true
+    branch: /^v\d+\.\d+\.\d+$/

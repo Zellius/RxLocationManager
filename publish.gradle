@@ -1,12 +1,17 @@
 ext.lib_name = ''
 ext.lib_description = ''
 
-def lib_version = '1.0.0'
+def lib_tag = project.hasProperty('tag') ? project.property('tag') : System.getenv('TRAVIS_TAG')
+
 def repository_url = 'https://github.com/Zellius/RxLocationManager'
+def lib_version = '0.0.0'
+
+if (lib_tag?.trim()) {
+    lib_version = (lib_tag =~ /v(\d+\.\d+\.\d+)/)[0][1]
+}
 
 apply plugin: 'com.jfrog.bintray'
 apply plugin: 'com.github.dcendents.android-maven'
-
 
 group 'com.github.zellius'
 version lib_version
