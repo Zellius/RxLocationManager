@@ -1,3 +1,0 @@
-ext.lib_version = '0.1.2'
-ext.lib_name = 'RxLocationManager'
-ext.lib_description = 'Android library that helps to get location using standart LocationManager and RxJava'

@@ -1,100 +1,106 @@
-ext.lib_version = ''
 ext.lib_name = ''
 ext.lib_description = ''
 
+def lib_tag = project.hasProperty('tag') ? project.property('tag') : System.getenv('TRAVIS_TAG')
+
 def repository_url = 'https://github.com/Zellius/RxLocationManager'
+def lib_version = '0.0.0'
+
+if (lib_tag?.trim()) {
+    lib_version = (lib_tag =~ /v(\d+\.\d+\.\d+)/)[0][1]
+}
 
 apply plugin: 'com.jfrog.bintray'
 apply plugin: 'com.github.dcendents.android-maven'
 
-afterEvaluate {
-    group 'com.github.zellius'
-    version lib_version
+group 'com.github.zellius'
+version lib_version
 
-    install {
-        repositories.mavenInstaller {
-            pom {
-                project {
-                    packaging 'aar'
+install {
+    repositories.mavenInstaller {
+        pom {
+            project {
+                packaging 'aar'
 
-                    name lib_name
-                    description lib_description
+                name lib_name
+                description lib_description
+                url repository_url
+
+                licenses {
+                    license {
+                        name 'MIT'
+                        url 'https://raw.github.com/zellius/RxLocationManager/master/LICENSE'
+                    }
+                }
+
+                developers {
+                    developer {
+                        id 'zellius'
+                        name 'Sergey Solodovnikov'
+                        email 'elementa.ru@gmail.com'
+                    }
+                }
+
+                scm {
                     url repository_url
+                    connection "scm:${repository_url}.git"
+                    developerConnection "scm:${repository_url}.git"
 
-                    licenses {
-                        license {
-                            name 'MIT'
-                            url 'https://raw.github.com/zellius/RxLocationManager/master/LICENSE'
-                        }
-                    }
-
-                    developers {
-                        developer {
-                            id 'zellius'
-                            name 'Sergey Solodovnikov'
-                            email 'elementa.ru@gmail.com'
-                        }
-                    }
-
-                    scm {
-                        url repository_url
-                        connection "scm:${repository_url}.git"
-                        developerConnection "scm:${repository_url}.git"
-
-                    }
                 }
             }
         }
     }
+}
 
-    bintray {
-        user = project.hasProperty('bintrayUser') ? project.property('bintrayUser') : System.getenv('BINTRAY_USER')
-        key = project.hasProperty('bintrayApiKey') ? project.property('bintrayApiKey') : System.getenv('BINTRAY_API_KEY')
+bintray {
+    user = project.hasProperty('bintrayUser') ? project.property('bintrayUser') : System.getenv('BINTRAY_USER')
+    key = project.hasProperty('bintrayApiKey') ? project.property('bintrayApiKey') : System.getenv('BINTRAY_API_KEY')
 
-        configurations = ['archives']
-        pkg {
-            repo = 'maven'
-            name = lib_name
-            desc = lib_description
-            licenses = ['MIT']
-            websiteUrl = repository_url
-            issueTrackerUrl = "$repository_url/issues"
-            vcsUrl = "${repository_url}.git"
+    configurations = ['archives']
+    pkg {
+        repo = 'maven'
+        name = lib_name
+        desc = lib_description
+        licenses = ['MIT']
+        websiteUrl = repository_url
+        issueTrackerUrl = "$repository_url/issues"
+        vcsUrl = "${repository_url}.git"
 
-            labels = ['android', 'location', 'rxJava', 'locationmanager']
+        labels = ['android', 'location', 'rxJava', 'locationmanager']
 
-            githubRepo = "Zellius/RxLocationManager"
-            githubReleaseNotesFile = 'README.md'
+        githubRepo = "Zellius/RxLocationManager"
+        githubReleaseNotesFile = 'README.md'
 
-            version {
-                name = lib_version
-                vcsTag = "v$lib_version"
-                released = new Date()
-            }
+        version {
+            name = lib_version
+            vcsTag = "v$lib_version"
+            released = new Date()
         }
     }
+}
 
-    apply plugin: 'org.jetbrains.dokka-android'
+apply plugin: 'org.jetbrains.dokka-android'
 
-    dokka {
-        outputFormat = 'javadoc'
-        sourceDirs = android.sourceSets.main.java.srcDirs
-        outputDirectory = "$buildDir/javadoc"
-    }
+dokka {
+    outputFormat = 'javadoc'
+    //add lib javadoc and core javadoc
+    sourceDirs = files("$buildDir/generated/core/release", android.sourceSets.main.java.srcDirs)
+    outputDirectory = "$buildDir/javadoc"
+}
 
-    task androidJavadocsJar(type: Jar, dependsOn: dokka) {
-        classifier 'javadoc'
-        from dokka.outputDirectory
-    }
+task androidJavadocsJar(type: Jar, dependsOn: dokka) {
+    classifier 'javadoc'
+    from dokka.outputDirectory
+}
 
 
-    task androidSourcesJar(type: Jar) {
-        classifier 'sources'
-        from android.sourceSets.main.java.srcDirs
-    }
+task androidSourcesJar(type: Jar) {
+    classifier 'sources'
+    //add lib sources and core sources
+    from "$buildDir/generated/core/release", android.sourceSets.main.java.srcDirs
+}
 
-    artifacts {
-        archives androidSourcesJar
-        archives androidJavadocsJar
-    }
+artifacts {
+    archives androidSourcesJar
+    archives androidJavadocsJar
 }
