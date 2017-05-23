@@ -66,8 +66,8 @@ project(':rxlocationmanager-rxjava2') {
 
     apply from: '../publish.gradle'
 
-    ext.lib_name = 'Rx2LocationManager'
-    ext.lib_description = 'Android library that helps to get location using standart LocationManager and RxJava2'
+    lib_name = 'Rx2LocationManager'
+    lib_description = 'Android library that helps to get location using standart LocationManager and RxJava2'
 
     dependencies {
         compile 'io.reactivex.rxjava2:rxjava:2.1.0'
@@ -84,8 +84,8 @@ project(':rxlocationmanager') {
 
     apply from: '../publish.gradle'
 
-    ext.lib_name = 'RxLocationManager'
-    ext.lib_description = 'Android library that helps to get location using standart LocationManager and RxJava'
+    lib_name = 'RxLocationManager'
+    lib_description = 'Android library that helps to get location using standart LocationManager and RxJava'
 
     dependencies {
         compile 'io.reactivex:rxjava:1.3.0'
