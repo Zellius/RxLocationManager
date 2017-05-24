@@ -74,6 +74,7 @@ addLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(30, TimeUnit.
 ```
 ## Download
 ##### rxJava1
+[ ![Download](https://api.bintray.com/packages/zellius/maven/RxLocationManager/images/download.svg) ](https://bintray.com/zellius/maven/RxLocationManager/_latestVersion)
 ###### Maven:
 ```xml
 <dependency>
@@ -87,6 +88,7 @@ addLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(30, TimeUnit.
 compile 'com.github.zellius:rxlocationmanager:x.y.z'
 ```
 ##### rxJava2
+[ ![Download](https://api.bintray.com/packages/zellius/maven/Rx2LocationManager/images/download.svg) ](https://bintray.com/zellius/maven/Rx2LocationManager/_latestVersion)
 ###### Maven:
 ```xml
 <dependency>
