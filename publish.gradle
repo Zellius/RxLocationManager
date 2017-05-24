@@ -1,8 +1,14 @@
-ext.lib_version = ''
 ext.lib_name = ''
 ext.lib_description = ''
 
+def lib_tag = project.hasProperty('tag') ? project.property('tag') : System.getenv('TRAVIS_TAG')
+
 def repository_url = 'https://github.com/Zellius/RxLocationManager'
+def lib_version = '0.0.0'
+
+if (lib_tag?.trim()) {
+    lib_version = (lib_tag =~ /v(\d+\.\d+\.\d+)/)[0][1]
+}
 
 apply plugin: 'com.jfrog.bintray'
 apply plugin: 'com.github.dcendents.android-maven'
@@ -78,7 +84,8 @@ afterEvaluate {
 
     dokka {
         outputFormat = 'javadoc'
-        sourceDirs = android.sourceSets.main.java.srcDirs
+        //add lib javadoc and core javadoc
+        sourceDirs = files("$buildDir/generated/core/release", android.sourceSets.main.java.srcDirs)
         outputDirectory = "$buildDir/javadoc"
     }
 
@@ -90,7 +97,8 @@ afterEvaluate {
 
     task androidSourcesJar(type: Jar) {
         classifier 'sources'
-        from android.sourceSets.main.java.srcDirs
+        //add lib sources and core sources
+        from "$buildDir/generated/core/release", android.sourceSets.main.java.srcDirs
     }
 
     artifacts {

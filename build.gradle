@@ -1,18 +1,23 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
-
 buildscript {
+    ext.kotlin_version = '1.1.2-3'
+
     repositories {
         jcenter()
         mavenCentral()
+        maven {
+            url = 'https://dl.bintray.com/kotlin/kotlin-dev/'
+        }
     }
-    ext.kotlin_version = '1.1.1'
+
     dependencies {
-        classpath 'com.android.tools.build:gradle:2.3.1'
-        classpath 'org.kt3k.gradle.plugin:coveralls-gradle-plugin:2.8.1'
+        classpath 'com.android.tools.build:gradle:2.3.2'
         classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7.3'
+        classpath 'org.kt3k.gradle.plugin:coveralls-gradle-plugin:2.8.1'
         classpath 'com.github.dcendents:android-maven-gradle-plugin:1.5'
-        classpath 'org.jetbrains.dokka:dokka-android-gradle-plugin:0.9.13'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        //TODO https://github.com/Kotlin/dokka/issues/140
+        classpath 'org.jetbrains.dokka:dokka-android-gradle-plugin:0.9.14-eap-3'
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
@@ -24,70 +29,124 @@ allprojects {
         jcenter()
     }
 }
-subprojects {
-    if (!name.contains('sample')) {
-        apply plugin: 'jacoco'
-        apply plugin: 'com.android.library'
-        apply from: '../publish.gradle'
 
-        android {
-            compileSdkVersion 25
-            buildToolsVersion "25.0.2"
+//copy core classes to the project gen folder
+def includeCoreClasses = { Project p ->
+    p.android.libraryVariants.all { variant ->
+        def outputDir = p.file("$p.buildDir/generated/core/${variant.dirName}")
+        def packageName = variant.generateBuildConfig.appPackageName
 
-            defaultConfig {
-                minSdkVersion 9
-                targetSdkVersion 25
-            }
-            buildTypes {
-                release {
-                    minifyEnabled false
-                    proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-                }
-                debug {
-                    testCoverageEnabled true
-                }
-            }
-            testOptions {
-                unitTests.all {
-                    jacoco {
-                        includeNoLocationClasses = true
+        def mergeTask = p.tasks.create(name: "merge${variant.name.capitalize()}CoreClasses", type: Copy) {
+            from(project(':core').android.sourceSets.main.java.srcDirs) {
+                filter { String line ->
+                    if (line == 'package ru.solodovnikov.rxlocationmanager') {
+                        "package $packageName"
+                    } else {
+                        line
                     }
                 }
+                eachFile {
+                    path = "${packageName.replaceAll('\\.', '/')}/$name"
+                }
+            }
+            into outputDir
+        }
+        variant.registerJavaGeneratingTask mergeTask, outputDir
+    }
+}
+
+project(':core') {
+    apply from: '../base_project.gradle'
+}
+
+project(':rxlocationmanager-rxjava2') {
+    apply from: '../base_project.gradle'
+
+    apply from: '../coverage.gradle'
+
+    apply from: '../publish.gradle'
+
+    lib_name = 'Rx2LocationManager'
+    lib_description = 'Android library that helps to get location using standart LocationManager and RxJava2'
+
+    dependencies {
+        compile 'io.reactivex.rxjava2:rxjava:2.1.0'
+        compile 'io.reactivex.rxjava2:rxandroid:2.0.1'
+    }
+
+    includeCoreClasses(it)
+}
+
+project(':rxlocationmanager') {
+    apply from: '../base_project.gradle'
+
+    apply from: '../coverage.gradle'
+
+    apply from: '../publish.gradle'
+
+    lib_name = 'RxLocationManager'
+    lib_description = 'Android library that helps to get location using standart LocationManager and RxJava'
+
+    dependencies {
+        compile 'io.reactivex:rxjava:1.3.0'
+        compile 'io.reactivex:rxandroid:1.2.1'
+    }
+
+    includeCoreClasses(it)
+}
+
+subprojects {
+    if (name.contains('sample')) {
+        prepareSample(it)
+    }
+}
+
+def prepareSample(Project p) {
+    def isKotlinSample = p.name.contains('kotlin')
+    def isRxJava2Sample = p.name.contains('rxjava2')
+
+    p.apply plugin: 'com.android.application'
+    if (isKotlinSample) {
+        p.apply plugin: 'kotlin-android'
+    }
+
+    p.android {
+        compileSdkVersion 25
+        buildToolsVersion "25.0.3"
+
+        defaultConfig {
+            applicationId "ru.solodovnikov.rxlocationmanager.sample"
+            minSdkVersion 14
+            targetSdkVersion 25
+            versionCode 1
+            versionName "1.0"
+        }
+        buildTypes {
+            release {
+                minifyEnabled false
+                proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             }
         }
+        if (isKotlinSample) {
+            sourceSets {
+                main.java.srcDirs += 'src/main/kotlin'
+            }
+        }
+    }
 
-        dependencies {
-            compile fileTree(include: ['*.jar'], dir: 'libs')
-            compile 'io.reactivex:rxjava:1.2.9'
-            compile 'io.reactivex:rxandroid:1.2.1'
-            compile 'com.android.support:support-annotations:25.3.1'
+    p.dependencies {
+        compile fileTree(include: ['*.jar'], dir: 'libs')
+        compile 'com.android.support:appcompat-v7:25.3.1'
+        compile 'com.android.support:design:25.3.1'
 
-            testCompile 'junit:junit:4.12'
-            testCompile 'org.robolectric:robolectric:3.3.2'
-            testCompile 'org.mockito:mockito-core:2.7.21'
+        if (isKotlinSample) {
+            compile "org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version"
         }
 
-        task jacocoTestReport(type: JacocoReport, dependsOn: "testDebugUnitTest") {
-            group = "Reporting"
-            description = "Generate Jacoco coverage reports"
-
-            classDirectories = fileTree(
-                    dir: "${project.buildDir}/intermediates/classes",
-                    excludes: ['**/R.class',
-                               '**/R$*.class',
-                               '**/*$ViewInjector*.*',
-                               '**/BuildConfig.*',
-                               '**/Manifest*.*']
-            )
-
-            additionalSourceDirs = files(project.android.sourceSets.main.java.srcDirs)
-            sourceDirectories = files(project.android.sourceSets.main.java.srcDirs)
-            executionData = files("${project.buildDir}/jacoco/testDebugUnitTest.exec")
-
-            reports {
-                xml.enabled = true
-                html.enabled = true
-            }
+        if (isRxJava2Sample) {
+            compile project(':rxlocationmanager-rxjava2')
+        } else {
+            compile project(':rxlocationmanager')
         }
     }
 }
@@ -96,18 +155,17 @@ task clean(type: Delete) {
     delete rootProject.buildDir
 }
 
-def validSubprojects = subprojects.findAll {
-    !it.name.contains('sample')
-}
+def reportingSubprojects = [project(':rxlocationmanager-rxjava2'), project(':rxlocationmanager')]
 
 apply plugin: 'jacoco'
-task jacocoRootReport(type: JacocoReport, group: 'Coverage reports', description: 'Generates an aggregate report from all subprojects') {
-    dependsOn = validSubprojects.jacocoTestReport
 
-    classDirectories = files(validSubprojects.jacocoTestReport.classDirectories)
-    additionalSourceDirs = files(validSubprojects.jacocoTestReport.additionalSourceDirs)
-    sourceDirectories = files(validSubprojects.jacocoTestReport.additionalSourceDirs)
-    executionData = files(validSubprojects.jacocoTestReport.executionData)
+task jacocoRootReport(type: JacocoReport, group: 'Coverage reports', description: 'Generates an aggregate report from all subprojects') {
+    dependsOn = reportingSubprojects.jacocoTestReport
+
+    classDirectories = files(reportingSubprojects.jacocoTestReport.classDirectories)
+    additionalSourceDirs = files(reportingSubprojects.jacocoTestReport.additionalSourceDirs)
+    sourceDirectories = files(reportingSubprojects.jacocoTestReport.additionalSourceDirs)
+    executionData = files(reportingSubprojects.jacocoTestReport.executionData)
 
     reports {
         html.enabled = true // human readable
@@ -116,7 +174,8 @@ task jacocoRootReport(type: JacocoReport, group: 'Coverage reports', description
 }
 
 apply plugin: 'com.github.kt3k.coveralls'
+
 coveralls {
     jacocoReportPath = "${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.xml"
-    sourceDirs = validSubprojects.android.sourceSets.main.java.srcDirs.flatten()
+    sourceDirs = reportingSubprojects.android.sourceSets.main.java.srcDirs.flatten()
 }
