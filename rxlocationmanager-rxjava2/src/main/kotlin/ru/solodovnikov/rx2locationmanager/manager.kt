@@ -13,7 +13,7 @@ import java.util.concurrent.TimeoutException
  * Implementation of [BaseRxLocationManager] based on RxJava2
  */
 class RxLocationManager internal constructor(context: Context,
-                                             private val scheduler: Scheduler) : BaseRxLocationManager<Single<Location>, Maybe<Location>>(context) {
+                                             private val scheduler: Scheduler) : BaseRxLocationManager<Single<Location>, Maybe<Location>, Observable<Location>>(context) {
     constructor(context: Context) : this(context, AndroidSchedulers.mainThread())
 
     /**
@@ -68,6 +68,28 @@ class RxLocationManager internal constructor(context: Context,
                 .compose { applySchedulers(it) }
     }
 
+    override fun baseRequestLocationUpdates(provider: String, minTime: Long, minDistance: Float): Observable<Location> {
+        Observable.create(ObservableOnSubscribe<Location> {
+            val locationListener = object : LocationListener {
+                override fun onLocationChanged(location: Location?) {
+                    it.onNext(location)
+                }
+
+                override fun onProviderDisabled(p: String?) {
+                }
+
+                override fun onStatusChanged(p0: String?, p1: Int, p2: Bundle?) {}
+
+                override fun onProviderEnabled(p: String?) {}
+            }
+
+            locationManager.requestLocationUpdates(provider, minTime, minDistance, locationListener)
+
+            it.setCancellable { locationManager.removeUpdates(locationListener) }
+        })
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
     private fun applySchedulers(s: Single<Location>) = s.subscribeOn(scheduler)
 
     private fun applySchedulers(m: Maybe<Location>) = m.subscribeOn(scheduler)
@@ -76,7 +98,7 @@ class RxLocationManager internal constructor(context: Context,
 /**
  * Implementation of [BaseLocationRequestBuilder] based on rxJava2
  */
-class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationManager) : BaseLocationRequestBuilder<Single<Location>, Maybe<Location>, MaybeTransformer<Location, Location>, LocationRequestBuilder>(rxLocationManager) {
+class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationManager) : BaseLocationRequestBuilder<Single<Location>, Maybe<Location>, Observable<Location>, MaybeTransformer<Location, Location>, LocationRequestBuilder>(rxLocationManager) {
     constructor(context: Context) : this(RxLocationManager(context))
 
     private var resultObservable = Observable.empty<Location>()

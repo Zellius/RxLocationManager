@@ -10,7 +10,7 @@ import java.util.concurrent.TimeoutException
 /**
  * Abstract class used just to implement rxJava1 and rxJava2
  */
-abstract class BaseRxLocationManager<out SINGLE, out MAYBE>(context: Context) {
+abstract class BaseRxLocationManager<out SINGLE, out MAYBE, out OBSERVABLE>(context: Context) {
     protected val locationManager: LocationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
     /**
@@ -42,9 +42,25 @@ abstract class BaseRxLocationManager<out SINGLE, out MAYBE>(context: Context) {
     fun requestLocation(provider: String, timeOut: LocationTime? = null): SINGLE
             = baseRequestLocation(provider, timeOut)
 
+    /**
+     * Register for location updates using a Criteria
+     *
+     * @param provider the name of the provider with which to register
+     * @param minTime minimum time interval between location updates, in milliseconds
+     * @param minDistance minimum distance between location updates, in meters
+     */
+    fun requestLocationUpdates(provider: String,
+                               minTime: Long,
+                               minDistance: Float): OBSERVABLE =
+            baseRequestLocationUpdates(provider, minTime, minDistance)
+
     protected abstract fun baseGetLastLocation(provider: String, howOldCanBe: LocationTime?): MAYBE
 
     protected abstract fun baseRequestLocation(provider: String, timeOut: LocationTime?): SINGLE
+
+    protected abstract fun baseRequestLocationUpdates(provider: String,
+                                                      minTime: Long,
+                                                      minDistance: Float): OBSERVABLE
 
     /**
      * Check is location not old

@@ -5,7 +5,7 @@ import android.location.Location
 /**
  * Abstract class used just to implement rxJava1 and rxJava2
  */
-abstract class BaseLocationRequestBuilder<out SINGLE, out MAYBE, in TRANSFORMER, out BUILDER : BaseLocationRequestBuilder<SINGLE, MAYBE, TRANSFORMER, BUILDER>> internal constructor(protected val rxLocationManager: BaseRxLocationManager<SINGLE, MAYBE>) {
+abstract class BaseLocationRequestBuilder<out SINGLE, out MAYBE, out OBSERVABLE, in TRANSFORMER, out BUILDER : BaseLocationRequestBuilder<SINGLE, MAYBE, OBSERVABLE, TRANSFORMER, BUILDER>> internal constructor(protected val rxLocationManager: BaseRxLocationManager <SINGLE, MAYBE, OBSERVABLE>) {
     protected var defaultLocation: Location? = null
         private set
 

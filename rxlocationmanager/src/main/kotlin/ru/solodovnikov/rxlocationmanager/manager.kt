@@ -18,7 +18,7 @@ import java.util.concurrent.TimeoutException
  * Implementation of [BaseRxLocationManager] based on RxJava1
  */
 class RxLocationManager internal constructor(context: Context,
-                                             private val scheduler: Scheduler) : BaseRxLocationManager<Single<Location>, Single<Location>>(context) {
+                                             private val scheduler: Scheduler) : BaseRxLocationManager<Single<Location>, Single<Location>, Observable<Location>>(context) {
     constructor(context: Context) : this(context, AndroidSchedulers.mainThread())
 
     /**
@@ -47,6 +47,10 @@ class RxLocationManager internal constructor(context: Context,
                     .toSingle()
                     .compose { if (timeOut != null) it.timeout(timeOut.time, timeOut.timeUnit) else it }
                     .compose { applySchedulers(it) }
+
+    override fun baseRequestLocationUpdates(provider: String, minTime: Long, minDistance: Float): Observable<Location> {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
 
     private fun applySchedulers(s: Single<Location>) = s.subscribeOn(scheduler)
 
@@ -87,7 +91,7 @@ class RxLocationManager internal constructor(context: Context,
 /**
  * Implementation of [BaseLocationRequestBuilder] based on rxJava1
  */
-class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationManager) : BaseLocationRequestBuilder<Single<Location>, Single<Location>, Single.Transformer<Location, Location>, LocationRequestBuilder>(rxLocationManager) {
+class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationManager) : BaseLocationRequestBuilder<Single<Location>, Single<Location>, Observable<Location>, Single.Transformer<Location, Location>, LocationRequestBuilder>(rxLocationManager) {
     constructor(context: Context) : this(RxLocationManager(context))
 
     private var resultObservable = Observable.empty<Location>()
