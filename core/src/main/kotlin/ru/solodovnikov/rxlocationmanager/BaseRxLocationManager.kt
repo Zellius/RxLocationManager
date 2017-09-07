@@ -12,6 +12,7 @@ import java.util.concurrent.TimeoutException
  */
 abstract class BaseRxLocationManager<out SINGLE, out MAYBE>(context: Context) {
     protected val locationManager: LocationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+    protected val context: Context = context.applicationContext
 
     /**
      * Get last location from specific provider
@@ -24,8 +25,8 @@ abstract class BaseRxLocationManager<out SINGLE, out MAYBE>(context: Context) {
      * @see ProviderHasNoLastLocationException
      */
     @JvmOverloads
-    fun getLastLocation(provider: String, howOldCanBe: LocationTime? = null): MAYBE =
-            baseGetLastLocation(provider, howOldCanBe)
+    fun getLastLocation(provider: String, howOldCanBe: LocationTime? = null, callback: PermissionCallback? = null): MAYBE =
+            baseGetLastLocation(provider, howOldCanBe, callback)
 
     /**
      * Try to get current location by specific provider.
@@ -39,12 +40,14 @@ abstract class BaseRxLocationManager<out SINGLE, out MAYBE>(context: Context) {
      * @see ProviderDisabledException
      */
     @JvmOverloads
-    fun requestLocation(provider: String, timeOut: LocationTime? = null): SINGLE
-            = baseRequestLocation(provider, timeOut)
+    fun requestLocation(provider: String, timeOut: LocationTime? = null, callback: PermissionCallback? = null): SINGLE
+            = baseRequestLocation(provider, timeOut, callback)
 
-    protected abstract fun baseGetLastLocation(provider: String, howOldCanBe: LocationTime?): MAYBE
+    abstract fun onRequestPermissionsResult(permissions: Array<out String>, grantResults: IntArray)
 
-    protected abstract fun baseRequestLocation(provider: String, timeOut: LocationTime?): SINGLE
+    protected abstract fun baseGetLastLocation(provider: String, howOldCanBe: LocationTime?, callback: PermissionCallback?): MAYBE
+
+    protected abstract fun baseRequestLocation(provider: String, timeOut: LocationTime?, callback: PermissionCallback?): SINGLE
 
     /**
      * Check is location not old
@@ -57,5 +60,11 @@ abstract class BaseRxLocationManager<out SINGLE, out MAYBE>(context: Context) {
         } else {
             System.currentTimeMillis() - time < howOldCanBe.timeUnit.toMillis(howOldCanBe.time)
         }
+    }
+
+    interface PermissionCallback {
+        fun shouldShowRequestPermissionRationale(permission: String): Boolean
+
+        fun requestPermissions(permissions: Array<String>)
     }
 }

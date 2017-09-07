@@ -25,7 +25,7 @@ class RxLocationManager internal constructor(context: Context,
      * @return Result [Single] will emit null if there is no location by this [provider].
      * Or it will be emit [ElderLocationException] if [howOldCanBe] not null and location is too old.
      */
-    override fun baseGetLastLocation(provider: String, howOldCanBe: LocationTime?): Single<Location> =
+    override fun baseGetLastLocation(provider: String, howOldCanBe: LocationTime?, callback: PermissionCallback?): Single<Location> =
             Single.fromCallable { locationManager.getLastKnownLocation(provider) }
                     .compose {
                         if (howOldCanBe != null) {
@@ -42,11 +42,15 @@ class RxLocationManager internal constructor(context: Context,
     /**
      * @return Result [Single] can throw [ProviderDisabledException] or [TimeoutException] if [timeOut] not null
      */
-    override fun baseRequestLocation(provider: String, timeOut: LocationTime?): Single<Location> =
+    override fun baseRequestLocation(provider: String, timeOut: LocationTime?, callback: PermissionCallback?): Single<Location> =
             Observable.create(RxLocationListener(locationManager, provider), Emitter.BackpressureMode.NONE)
                     .toSingle()
                     .compose { if (timeOut != null) it.timeout(timeOut.time, timeOut.timeUnit) else it }
                     .compose { applySchedulers(it) }
+
+    override fun onRequestPermissionsResult(permissions: Array<out String>, grantResults: IntArray) {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
 
     private fun applySchedulers(s: Single<Location>) = s.subscribeOn(scheduler)
 

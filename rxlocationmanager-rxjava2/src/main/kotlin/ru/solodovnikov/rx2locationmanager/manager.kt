@@ -1,12 +1,18 @@
 package ru.solodovnikov.rx2locationmanager
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
+import android.os.Build
 import android.os.Bundle
 import io.reactivex.*
+import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.functions.Function
+import io.reactivex.subjects.PublishSubject
+import java.util.*
 import java.util.concurrent.TimeoutException
 
 /**
@@ -16,33 +22,40 @@ class RxLocationManager internal constructor(context: Context,
                                              private val scheduler: Scheduler) : BaseRxLocationManager<Single<Location>, Maybe<Location>>(context) {
     constructor(context: Context) : this(context, AndroidSchedulers.mainThread())
 
+    private val permissions by lazy {
+        arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+    }
+    private val permissionResult = PublishSubject.create<Pair<Array<out String>, IntArray>>()
+
     /**
      * @return Result [Maybe] will not emit any value if location is null.
      * Or it will be emit [ElderLocationException] if [howOldCanBe] not null and location is too old
      */
-    override fun baseGetLastLocation(provider: String, howOldCanBe: LocationTime?): Maybe<Location> =
-            Maybe.fromCallable { locationManager.getLastKnownLocation(provider) ?: throw ProviderHasNoLastLocationException(provider) }
-                    .onErrorComplete { it is ProviderHasNoLastLocationException }
-                    .compose {
-                        if (howOldCanBe != null) {
-                            it.doOnSuccess {
-                                if (!it.isNotOld(howOldCanBe)) {
-                                    throw ElderLocationException(it)
+    override fun baseGetLastLocation(provider: String, howOldCanBe: LocationTime?, callback: PermissionCallback?): Maybe<Location> =
+            checkPermissions(callback)
+                    .andThen(Maybe.fromCallable { locationManager.getLastKnownLocation(provider) ?: throw ProviderHasNoLastLocationException(provider) }
+                            .onErrorComplete { it is ProviderHasNoLastLocationException }
+                            .compose {
+                                if (howOldCanBe != null) {
+                                    it.doOnSuccess {
+                                        if (!it.isNotOld(howOldCanBe)) {
+                                            throw ElderLocationException(it)
+                                        }
+                                    }
+                                } else {
+                                    it
                                 }
-                            }
-                        } else {
-                            it
-                        }
-                    }.compose { applySchedulers(it) }
+                            }.compose { applySchedulers(it) })
+
 
     /**
      * @return Result [Single] can throw [ProviderDisabledException] or [TimeoutException] if [timeOut] not null
      */
-    override fun baseRequestLocation(provider: String, timeOut: LocationTime?): Single<Location> {
-        return Single.create(SingleOnSubscribe<Location> {
+    override fun baseRequestLocation(provider: String, timeOut: LocationTime?, callback: PermissionCallback?): Single<Location> =
+        checkPermissions(callback).andThen(Single.create(SingleOnSubscribe<Location> {
             if (locationManager.isProviderEnabled(provider)) {
                 val locationListener = object : LocationListener {
-                    override fun onLocationChanged(location: Location?) {
+                    override fun onLocationChanged(location: Location) {
                         it.onSuccess(location)
                     }
 
@@ -65,8 +78,42 @@ class RxLocationManager internal constructor(context: Context,
                 it.onError(ProviderDisabledException(provider))
             }
         }).compose { if (timeOut != null) it.timeout(timeOut.time, timeOut.timeUnit) else it }
-                .compose { applySchedulers(it) }
+                .compose { applySchedulers(it) })
+
+    override fun onRequestPermissionsResult(permissions: Array<out String>, grantResults: IntArray) {
+        permissionResult.onNext(Pair(permissions, grantResults))
     }
+
+    private fun checkPermissions(callback: PermissionCallback?): Completable =
+            Completable.create { emitter ->
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    val deniedP = permissions.filter {
+                        context.checkSelfPermission(it) == PackageManager.PERMISSION_DENIED
+                    }.toTypedArray()
+
+                    if (deniedP.isNotEmpty()) {
+                        if (callback == null) {
+                            emitter.onError(SecurityException("Used did not provide permissions: ${deniedP.asList()}"))
+                        } else {
+                            callback.requestPermissions(deniedP)
+                            val d = permissionResult.subscribe {
+                                val resultPermissions = it.first
+                                val resultPermissionsResults = it.second
+                                if (!Arrays.equals(resultPermissions, deniedP) || resultPermissionsResults.find { it == PackageManager.PERMISSION_DENIED } != null) {
+                                    emitter.onError(SecurityException("User denied permissions: ${deniedP.asList()}"))
+                                } else {
+                                    emitter.onComplete()
+                                }
+                            }
+                            emitter.setCancellable { d.dispose() }
+                        }
+                    } else {
+                        emitter.onComplete()
+                    }
+                } else {
+                    emitter.onComplete()
+                }
+            }
 
     private fun applySchedulers(s: Single<Location>) = s.subscribeOn(scheduler)
 

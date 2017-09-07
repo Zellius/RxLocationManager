@@ -5,19 +5,20 @@ import android.location.LocationManager
 import android.os.Bundle
 import android.support.design.widget.CoordinatorLayout
 import android.support.design.widget.Snackbar
+import android.support.v4.app.ActivityCompat
+import android.support.v4.app.Fragment
+import android.support.v4.content.ContextCompat
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.Toolbar
 import android.view.Menu
 import android.view.MenuItem
 import io.reactivex.Maybe
 import io.reactivex.Single
-import ru.solodovnikov.rx2locationmanager.IgnoreErrorTransformer
-import ru.solodovnikov.rx2locationmanager.LocationRequestBuilder
-import ru.solodovnikov.rx2locationmanager.LocationTime
-import ru.solodovnikov.rx2locationmanager.RxLocationManager
+import io.reactivex.subjects.PublishSubject
+import ru.solodovnikov.rx2locationmanager.*
 import java.util.concurrent.TimeUnit
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), BaseRxLocationManager.PermissionCallback {
     private val rxLocationManager: RxLocationManager by lazy { RxLocationManager(this) }
     private val locationRequestBuilder: LocationRequestBuilder by lazy { LocationRequestBuilder(this) }
 
@@ -63,13 +64,24 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if(requestCode == REQUEST_CODE_LOCATION_PERMISSIONS){
+            rxLocationManager.onRequestPermissionsResult(permissions, grantResults)
+        }
+    }
+
+    override fun requestPermissions(permissions: Array<String>) {
+        ActivityCompat.requestPermissions(this, permissions, REQUEST_CODE_LOCATION_PERMISSIONS)
+    }
+
     private fun requestLastNetworkLocation() {
-        rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER)
+        rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, callback = this)
                 .testSubscribe("requestLastNetworkLocation")
     }
 
     private fun requestLastNetworkOneMinuteOldLocation() {
-        rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(1, TimeUnit.MINUTES))
+        rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(1, TimeUnit.MINUTES), this)
                 .testSubscribe("requestLastNetworkOneMinuteOldLocation")
     }
 
@@ -120,5 +132,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun showErrorMessage(throwable: Throwable, methodName: String) {
         showSnackbar("$methodName Error: ${throwable.message}")
+    }
+
+    companion object {
+        private const val REQUEST_CODE_LOCATION_PERMISSIONS = 150
     }
 }
