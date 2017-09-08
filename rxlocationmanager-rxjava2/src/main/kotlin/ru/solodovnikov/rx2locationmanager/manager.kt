@@ -22,81 +22,105 @@ class RxLocationManager internal constructor(context: Context,
                                              private val scheduler: Scheduler) : BaseRxLocationManager<Single<Location>, Maybe<Location>>(context) {
     constructor(context: Context) : this(context, AndroidSchedulers.mainThread())
 
-    private val permissions by lazy {
-        arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
-    }
-    private val permissionResult = PublishSubject.create<Pair<Array<out String>, IntArray>>()
 
     /**
      * @return Result [Maybe] will not emit any value if location is null.
      * Or it will be emit [ElderLocationException] if [howOldCanBe] not null and location is too old
      */
-    override fun baseGetLastLocation(provider: String, howOldCanBe: LocationTime?, callback: PermissionCallback?): Maybe<Location> =
-            checkPermissions(callback)
-                    .andThen(Maybe.fromCallable { locationManager.getLastKnownLocation(provider) ?: throw ProviderHasNoLastLocationException(provider) }
-                            .onErrorComplete { it is ProviderHasNoLastLocationException }
-                            .compose {
-                                if (howOldCanBe != null) {
-                                    it.doOnSuccess {
-                                        if (!it.isNotOld(howOldCanBe)) {
-                                            throw ElderLocationException(it)
-                                        }
-                                    }
-                                } else {
-                                    it
+    override fun baseGetLastLocation(provider: String, howOldCanBe: LocationTime?, transformers: Array<out RxLocationTransformer<Maybe<Location>>>?): Maybe<Location> =
+            Maybe.fromCallable { locationManager.getLastKnownLocation(provider) ?: throw ProviderHasNoLastLocationException(provider) }
+                    .onErrorComplete { it is ProviderHasNoLastLocationException }
+                    .compose {
+                        if (howOldCanBe != null) {
+                            it.doOnSuccess {
+                                if (!it.isNotOld(howOldCanBe)) {
+                                    throw ElderLocationException(it)
                                 }
-                            }.compose { applySchedulers(it) })
+                            }
+                        } else {
+                            it
+                        }
+                    }.compose { applySchedulers(it) }
+                    .let {
+                        transformers?.fold(it, { acc, transformer -> transformer.transform(acc) }) ?: it
+                    }
 
 
     /**
      * @return Result [Single] can throw [ProviderDisabledException] or [TimeoutException] if [timeOut] not null
      */
-    override fun baseRequestLocation(provider: String, timeOut: LocationTime?, callback: PermissionCallback?): Single<Location> =
-        checkPermissions(callback).andThen(Single.create(SingleOnSubscribe<Location> {
-            if (locationManager.isProviderEnabled(provider)) {
-                val locationListener = object : LocationListener {
-                    override fun onLocationChanged(location: Location) {
-                        it.onSuccess(location)
-                    }
-
-                    override fun onProviderDisabled(p: String?) {
-                        if (provider == p) {
-                            it.onError(ProviderDisabledException(provider))
+    override fun baseRequestLocation(provider: String, timeOut: LocationTime?, transformers: Array<out RxLocationTransformer<Single<Location>>>?): Single<Location> =
+            Single.create(SingleOnSubscribe<Location> {
+                if (locationManager.isProviderEnabled(provider)) {
+                    val locationListener = object : LocationListener {
+                        override fun onLocationChanged(location: Location) {
+                            it.onSuccess(location)
                         }
+
+                        override fun onProviderDisabled(p: String?) {
+                            if (provider == p) {
+                                it.onError(ProviderDisabledException(provider))
+                            }
+                        }
+
+                        override fun onStatusChanged(p0: String?, p1: Int, p2: Bundle?) {}
+
+                        override fun onProviderEnabled(p: String?) {}
                     }
 
-                    override fun onStatusChanged(p0: String?, p1: Int, p2: Bundle?) {}
+                    locationManager.requestSingleUpdate(provider, locationListener, null)
 
-                    override fun onProviderEnabled(p: String?) {}
+                    it.setCancellable { locationManager.removeUpdates(locationListener) }
+
+                } else {
+                    it.onError(ProviderDisabledException(provider))
                 }
-
-                locationManager.requestSingleUpdate(provider, locationListener, null)
-
-                it.setCancellable { locationManager.removeUpdates(locationListener) }
-
-            } else {
-                it.onError(ProviderDisabledException(provider))
-            }
-        }).compose { if (timeOut != null) it.timeout(timeOut.time, timeOut.timeUnit) else it }
-                .compose { applySchedulers(it) })
+            }).compose { if (timeOut != null) it.timeout(timeOut.time, timeOut.timeUnit) else it }
+                    .compose { applySchedulers(it) }
+                    .let {
+                        transformers?.fold(it, { acc, transformer -> transformer.transform(acc) }) ?: it
+                    }
 
     override fun onRequestPermissionsResult(permissions: Array<out String>, grantResults: IntArray) {
         permissionResult.onNext(Pair(permissions, grantResults))
     }
 
-    private fun checkPermissions(callback: PermissionCallback?): Completable =
-            Completable.create { emitter ->
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    val deniedP = permissions.filter {
-                        context.checkSelfPermission(it) == PackageManager.PERMISSION_DENIED
-                    }.toTypedArray()
+    companion object {
+        private val permissionResult by lazy { PublishSubject.create<Pair<Array<out String>, IntArray>>() }
 
-                    if (deniedP.isNotEmpty()) {
-                        if (callback == null) {
-                            emitter.onError(SecurityException("Used did not provide permissions: ${deniedP.asList()}"))
-                        } else {
+        fun checkPermissionsSingle(context: Context,
+                                   callback: BasePermissionTransformer.PermissionCallback): BasePermissionTransformer<Single<Location>>
+                = PermissionRxSingleTransformer(context, permissionResult, callback)
+
+        fun checkPermissionsMaybe(context: Context,
+                                  callback: BasePermissionTransformer.PermissionCallback): BasePermissionTransformer<Maybe<Location>>
+                = PermissionRxMaybeTransformer(context, permissionResult, callback)
+    }
+
+    private fun applySchedulers(s: Single<Location>) = s.subscribeOn(scheduler)
+
+    private fun applySchedulers(m: Maybe<Location>) = m.subscribeOn(scheduler)
+
+    abstract class BasePermissionTransformerImpl<RX>(context: Context,
+                                                     private val permissionResult: PublishSubject<Pair<Array<out String>, IntArray>>,
+                                                     private val callback: BasePermissionTransformer.PermissionCallback
+    ) : BasePermissionTransformer<RX> {
+        private val context = context.applicationContext
+
+        private val permissions =
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION)
+
+        protected fun checkPermissions(): Completable =
+                Completable.create { emitter ->
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        val deniedP = permissions.filter {
+                            context.checkSelfPermission(it) == PackageManager.PERMISSION_DENIED
+                        }.toTypedArray()
+
+                        if (deniedP.isNotEmpty()) {
                             callback.requestPermissions(deniedP)
-                            val d = permissionResult.subscribe {
+                            permissionResult.subscribe {
                                 val resultPermissions = it.first
                                 val resultPermissionsResults = it.second
                                 if (!Arrays.equals(resultPermissions, deniedP) || resultPermissionsResults.find { it == PackageManager.PERMISSION_DENIED } != null) {
@@ -104,20 +128,29 @@ class RxLocationManager internal constructor(context: Context,
                                 } else {
                                     emitter.onComplete()
                                 }
-                            }
-                            emitter.setCancellable { d.dispose() }
+                            }.apply { emitter.setCancellable { dispose() } }
+                        } else {
+                            emitter.onComplete()
                         }
                     } else {
                         emitter.onComplete()
                     }
-                } else {
-                    emitter.onComplete()
                 }
-            }
+    }
 
-    private fun applySchedulers(s: Single<Location>) = s.subscribeOn(scheduler)
+    private class PermissionRxSingleTransformer(context: Context,
+                                                permissionResult: PublishSubject<Pair<Array<out String>, IntArray>>,
+                                                callback: BasePermissionTransformer.PermissionCallback
+    ) : BasePermissionTransformerImpl<Single<Location>>(context, permissionResult, callback) {
+        override fun transform(rx: Single<Location>): Single<Location> = checkPermissions().andThen(rx)
+    }
 
-    private fun applySchedulers(m: Maybe<Location>) = m.subscribeOn(scheduler)
+    private class PermissionRxMaybeTransformer(context: Context,
+                                               permissionResult: PublishSubject<Pair<Array<out String>, IntArray>>,
+                                               callback: BasePermissionTransformer.PermissionCallback
+    ) : BasePermissionTransformerImpl<Maybe<Location>>(context, permissionResult, callback) {
+        override fun transform(rx: Maybe<Location>): Maybe<Location> = checkPermissions().andThen(rx)
+    }
 }
 
 /**

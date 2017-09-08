@@ -10,9 +10,8 @@ import java.util.concurrent.TimeoutException
 /**
  * Abstract class used just to implement rxJava1 and rxJava2
  */
-abstract class BaseRxLocationManager<out SINGLE, out MAYBE>(context: Context) {
+abstract class BaseRxLocationManager<SINGLE, MAYBE>(context: Context) {
     protected val locationManager: LocationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-    protected val context: Context = context.applicationContext
 
     /**
      * Get last location from specific provider
@@ -25,8 +24,8 @@ abstract class BaseRxLocationManager<out SINGLE, out MAYBE>(context: Context) {
      * @see ProviderHasNoLastLocationException
      */
     @JvmOverloads
-    fun getLastLocation(provider: String, howOldCanBe: LocationTime? = null, callback: PermissionCallback? = null): MAYBE =
-            baseGetLastLocation(provider, howOldCanBe, callback)
+    fun getLastLocation(provider: String, howOldCanBe: LocationTime? = null, vararg transformers: RxLocationTransformer<MAYBE>): MAYBE =
+            baseGetLastLocation(provider, howOldCanBe, transformers)
 
     /**
      * Try to get current location by specific provider.
@@ -40,14 +39,14 @@ abstract class BaseRxLocationManager<out SINGLE, out MAYBE>(context: Context) {
      * @see ProviderDisabledException
      */
     @JvmOverloads
-    fun requestLocation(provider: String, timeOut: LocationTime? = null, callback: PermissionCallback? = null): SINGLE
-            = baseRequestLocation(provider, timeOut, callback)
+    fun requestLocation(provider: String, timeOut: LocationTime? = null, vararg transformers: RxLocationTransformer<SINGLE>): SINGLE
+            = baseRequestLocation(provider, timeOut, transformers)
 
     abstract fun onRequestPermissionsResult(permissions: Array<out String>, grantResults: IntArray)
 
-    protected abstract fun baseGetLastLocation(provider: String, howOldCanBe: LocationTime?, callback: PermissionCallback?): MAYBE
+    protected abstract fun baseGetLastLocation(provider: String, howOldCanBe: LocationTime?, transformers: Array<out RxLocationTransformer<MAYBE>>?): MAYBE
 
-    protected abstract fun baseRequestLocation(provider: String, timeOut: LocationTime?, callback: PermissionCallback?): SINGLE
+    protected abstract fun baseRequestLocation(provider: String, timeOut: LocationTime?, transformers: Array<out RxLocationTransformer<SINGLE>>?): SINGLE
 
     /**
      * Check is location not old
@@ -60,11 +59,5 @@ abstract class BaseRxLocationManager<out SINGLE, out MAYBE>(context: Context) {
         } else {
             System.currentTimeMillis() - time < howOldCanBe.timeUnit.toMillis(howOldCanBe.time)
         }
-    }
-
-    interface PermissionCallback {
-        fun shouldShowRequestPermissionRationale(permission: String): Boolean
-
-        fun requestPermissions(permissions: Array<String>)
     }
 }

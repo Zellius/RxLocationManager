@@ -18,7 +18,7 @@ import io.reactivex.subjects.PublishSubject
 import ru.solodovnikov.rx2locationmanager.*
 import java.util.concurrent.TimeUnit
 
-class MainActivity : AppCompatActivity(), BaseRxLocationManager.PermissionCallback {
+class MainActivity : AppCompatActivity(), BasePermissionTransformer.PermissionCallback {
     private val rxLocationManager: RxLocationManager by lazy { RxLocationManager(this) }
     private val locationRequestBuilder: LocationRequestBuilder by lazy { LocationRequestBuilder(this) }
 
@@ -76,12 +76,12 @@ class MainActivity : AppCompatActivity(), BaseRxLocationManager.PermissionCallba
     }
 
     private fun requestLastNetworkLocation() {
-        rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, callback = this)
+        rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER)
                 .testSubscribe("requestLastNetworkLocation")
     }
 
     private fun requestLastNetworkOneMinuteOldLocation() {
-        rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(1, TimeUnit.MINUTES), this)
+        rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(1, TimeUnit.MINUTES))
                 .testSubscribe("requestLastNetworkOneMinuteOldLocation")
     }
 

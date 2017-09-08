@@ -25,7 +25,7 @@ class RxLocationManager internal constructor(context: Context,
      * @return Result [Single] will emit null if there is no location by this [provider].
      * Or it will be emit [ElderLocationException] if [howOldCanBe] not null and location is too old.
      */
-    override fun baseGetLastLocation(provider: String, howOldCanBe: LocationTime?, callback: PermissionCallback?): Single<Location> =
+    override fun baseGetLastLocation(provider: String, howOldCanBe: LocationTime?, transformers: Array<out RxLocationTransformer<Single<Location>>>?): Single<Location> =
             Single.fromCallable { locationManager.getLastKnownLocation(provider) }
                     .compose {
                         if (howOldCanBe != null) {
@@ -42,7 +42,7 @@ class RxLocationManager internal constructor(context: Context,
     /**
      * @return Result [Single] can throw [ProviderDisabledException] or [TimeoutException] if [timeOut] not null
      */
-    override fun baseRequestLocation(provider: String, timeOut: LocationTime?, callback: PermissionCallback?): Single<Location> =
+    override fun baseRequestLocation(provider: String, timeOut: LocationTime?, transformers: Array<out RxLocationTransformer<Single<Location>>>?): Single<Location> =
             Observable.create(RxLocationListener(locationManager, provider), Emitter.BackpressureMode.NONE)
                     .toSingle()
                     .compose { if (timeOut != null) it.timeout(timeOut.time, timeOut.timeUnit) else it }
