@@ -36,10 +36,8 @@ class RxLocationManager internal constructor(context: Context,
                         } else {
                             it
                         }
-                    }.compose { applySchedulers(it) }
-                    .let {
-                        transformers?.fold(it, { acc, transformer -> transformer.transform(acc) }) ?: it
-                    }
+                    }.let { transformers?.fold(it, { acc, transformer -> transformer.transform(acc) }) ?: it }
+                    .compose { applySchedulers(it) }
 
 
     /**
@@ -72,23 +70,23 @@ class RxLocationManager internal constructor(context: Context,
                     it.onError(ProviderDisabledException(provider))
                 }
             }).compose { if (timeOut != null) it.timeout(timeOut.time, timeOut.timeUnit) else it }
-                    .compose { applySchedulers(it) }
                     .let {
                         transformers?.fold(it, { acc, transformer -> transformer.transform(acc) }) ?: it
                     }
+                    .compose { applySchedulers(it) }
+
 
     override fun onRequestPermissionsResult(permissions: Array<out String>, grantResults: IntArray) {
-
         permissionResult.onNext(Pair(permissions, grantResults))
     }
 
     fun permissionsSingleTransformer(context: Context,
                                      callback: BasePermissionTransformer.PermissionCallback): BasePermissionTransformer<Single<Location>>
-            = PermissionRxSingleTransformer(context, permissionResult, callback)
+            = PermissionRxSingleTransformer(context, callback, permissionResult)
 
     fun permissionsMaybeTransformer(context: Context,
                                     callback: BasePermissionTransformer.PermissionCallback): BasePermissionTransformer<Maybe<Location>>
-            = PermissionRxMaybeTransformer(context, permissionResult, callback)
+            = PermissionRxMaybeTransformer(context, callback, permissionResult)
 
     private fun applySchedulers(s: Single<Location>) = s.subscribeOn(scheduler)
 

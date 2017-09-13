@@ -21,6 +21,8 @@ class MainActivity : AppCompatActivity(), BasePermissionTransformer.PermissionCa
 
     private val coordinatorLayout: CoordinatorLayout by lazy { findViewById(R.id.root) as CoordinatorLayout }
 
+    private var checkPermissions = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -35,6 +37,11 @@ class MainActivity : AppCompatActivity(), BasePermissionTransformer.PermissionCa
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
+            R.id.check_permissions -> {
+                item.isChecked = !item.isChecked
+                checkPermissions = item.isChecked
+                return true
+            }
             R.id.last_network -> {
                 requestLastNetworkLocation()
                 return true
@@ -63,7 +70,7 @@ class MainActivity : AppCompatActivity(), BasePermissionTransformer.PermissionCa
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if(requestCode == REQUEST_CODE_LOCATION_PERMISSIONS){
+        if (requestCode == REQUEST_CODE_LOCATION_PERMISSIONS) {
             rxLocationManager.onRequestPermissionsResult(permissions, grantResults)
         }
     }
@@ -73,13 +80,19 @@ class MainActivity : AppCompatActivity(), BasePermissionTransformer.PermissionCa
     }
 
     private fun requestLastNetworkLocation() {
-        rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, transformers = rxLocationManager.permissionsMaybeTransformer(this, this))
-                .testSubscribe("requestLastNetworkLocation")
+        if (checkPermissions) {
+            rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, transformers = rxLocationManager.permissionsMaybeTransformer(this, this))
+        } else {
+            rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER)
+        }.testSubscribe("requestLastNetworkLocation")
     }
 
     private fun requestLastNetworkOneMinuteOldLocation() {
-        rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(1, TimeUnit.MINUTES))
-                .testSubscribe("requestLastNetworkOneMinuteOldLocation")
+        if (checkPermissions) {
+            rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(1, TimeUnit.MINUTES), rxLocationManager.permissionsMaybeTransformer(this, this))
+        } else {
+            rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(1, TimeUnit.MINUTES))
+        }.testSubscribe("requestLastNetworkOneMinuteOldLocation")
     }
 
     private fun requestLocation() {

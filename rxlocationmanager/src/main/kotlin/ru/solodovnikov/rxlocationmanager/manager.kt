@@ -11,6 +11,7 @@ import rx.Scheduler
 import rx.Single
 import rx.android.schedulers.AndroidSchedulers
 import rx.functions.Action1
+import rx.subjects.PublishSubject
 import java.util.*
 import java.util.concurrent.TimeoutException
 
@@ -20,6 +21,8 @@ import java.util.concurrent.TimeoutException
 class RxLocationManager internal constructor(context: Context,
                                              private val scheduler: Scheduler) : BaseRxLocationManager<Single<Location>, Single<Location>>(context) {
     constructor(context: Context) : this(context, AndroidSchedulers.mainThread())
+
+    private val permissionResult by lazy { PublishSubject.create<Pair<Array<out String>, IntArray>>() }
 
     /**
      * @return Result [Single] will emit null if there is no location by this [provider].
@@ -37,7 +40,8 @@ class RxLocationManager internal constructor(context: Context,
                         } else {
                             it
                         }
-                    }.compose { applySchedulers(it) }
+                    }.let { transformers?.fold(it, { acc, transformer -> transformer.transform(acc) }) ?: it }
+                    .compose { applySchedulers(it) }
 
     /**
      * @return Result [Single] can throw [ProviderDisabledException] or [TimeoutException] if [timeOut] not null
@@ -46,11 +50,16 @@ class RxLocationManager internal constructor(context: Context,
             Observable.create(RxLocationListener(locationManager, provider), Emitter.BackpressureMode.NONE)
                     .toSingle()
                     .compose { if (timeOut != null) it.timeout(timeOut.time, timeOut.timeUnit) else it }
+                    .let { transformers?.fold(it, { acc, transformer -> transformer.transform(acc) }) ?: it }
                     .compose { applySchedulers(it) }
 
     override fun onRequestPermissionsResult(permissions: Array<out String>, grantResults: IntArray) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        permissionResult.onNext(Pair(permissions, grantResults))
     }
+
+    fun permissionsTransformer(context: Context,
+                               callback: BasePermissionTransformer.PermissionCallback): BasePermissionTransformer<Single<Location>>
+            = PermissionTransformer(context, callback, permissionResult)
 
     private fun applySchedulers(s: Single<Location>) = s.subscribeOn(scheduler)
 
