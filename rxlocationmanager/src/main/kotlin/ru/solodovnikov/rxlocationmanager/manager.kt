@@ -19,7 +19,7 @@ import java.util.concurrent.TimeoutException
  * Implementation of [BaseRxLocationManager] based on RxJava1
  */
 class RxLocationManager internal constructor(context: Context,
-                                             private val scheduler: Scheduler) : BaseRxLocationManager<Single<Location>, Single<Location>>(context) {
+                                             private val scheduler: Scheduler) : BaseRxLocationManager<Single<Location>, Single<Location>, LocationRequestBuilder>(context) {
     constructor(context: Context) : this(context, AndroidSchedulers.mainThread())
 
     private val permissionResult by lazy { PublishSubject.create<Pair<Array<out String>, IntArray>>() }
@@ -56,6 +56,8 @@ class RxLocationManager internal constructor(context: Context,
     override fun onRequestPermissionsResult(permissions: Array<out String>, grantResults: IntArray) {
         permissionResult.onNext(Pair(permissions, grantResults))
     }
+
+    override fun locationRequestBuilder(): LocationRequestBuilder = LocationRequestBuilder(this)
 
     fun permissionsTransformer(context: Context,
                                callback: BasePermissionTransformer.PermissionCallback): BasePermissionTransformer<Single<Location>>
@@ -100,7 +102,8 @@ class RxLocationManager internal constructor(context: Context,
 /**
  * Implementation of [BaseLocationRequestBuilder] based on rxJava1
  */
-class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationManager) : BaseLocationRequestBuilder<Single<Location>, Single<Location>, Single.Transformer<Location, Location>, LocationRequestBuilder>(rxLocationManager) {
+class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationManager
+) : BaseLocationRequestBuilder<Single<Location>, Single<Location>, LocationRequestBuilder>(rxLocationManager) {
     constructor(context: Context) : this(RxLocationManager(context))
 
     private var resultObservable = Observable.empty<Location>()
