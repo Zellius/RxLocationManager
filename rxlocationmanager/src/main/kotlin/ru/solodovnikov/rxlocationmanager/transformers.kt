@@ -1,5 +1,6 @@
 package ru.solodovnikov.rxlocationmanager
 
+import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Build
@@ -7,9 +8,10 @@ import rx.Completable
 import rx.Single
 import java.util.*
 
-class PermissionTransformer(private val rxLocationManager: RxLocationManager,
+class PermissionTransformer(context: Context,
+                            private val rxLocationManager: RxLocationManager,
                             callback: BasePermissionTransformer.PermissionCallback
-) : BasePermissionTransformer<Single<Location>>(rxLocationManager.context, callback) {
+) : BasePermissionTransformer<Single<Location>>(context, callback) {
     override fun transform(rx: Single<Location>): Single<Location> =
             checkPermissions().andThen(rx)
 

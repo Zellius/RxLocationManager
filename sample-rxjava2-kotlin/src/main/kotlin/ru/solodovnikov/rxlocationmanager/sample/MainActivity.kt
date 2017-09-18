@@ -81,7 +81,7 @@ class MainActivity : AppCompatActivity(), BasePermissionTransformer.PermissionCa
 
     private fun requestLastNetworkLocation() {
         if (checkPermissions) {
-            rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, transformers = PermissionRxMaybeTransformer(rxLocationManager, this))
+            rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, transformers = PermissionRxMaybeTransformer(this, rxLocationManager, this))
         } else {
             rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER)
         }.testSubscribe("requestLastNetworkLocation")
@@ -89,7 +89,7 @@ class MainActivity : AppCompatActivity(), BasePermissionTransformer.PermissionCa
 
     private fun requestLastNetworkOneMinuteOldLocation() {
         if (checkPermissions) {
-            rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(1, TimeUnit.MINUTES), PermissionRxMaybeTransformer(rxLocationManager, this))
+            rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(1, TimeUnit.MINUTES), PermissionRxMaybeTransformer(this, rxLocationManager, this))
         } else {
             rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(1, TimeUnit.MINUTES))
         }.testSubscribe("requestLastNetworkOneMinuteOldLocation")
