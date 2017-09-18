@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity(), BasePermissionTransformer.PermissionCallback {
     private val rxLocationManager: RxLocationManager by lazy { RxLocationManager(this) }
-    private val locationRequestBuilder: LocationRequestBuilder by lazy { LocationRequestBuilder(this) }
+    private val locationRequestBuilder: LocationRequestBuilder by lazy { LocationRequestBuilder(rxLocationManager) }
 
     private val coordinatorLayout: CoordinatorLayout by lazy { findViewById(R.id.root) as CoordinatorLayout }
 
@@ -81,7 +81,7 @@ class MainActivity : AppCompatActivity(), BasePermissionTransformer.PermissionCa
 
     private fun requestLastNetworkLocation() {
         if (checkPermissions) {
-            rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, transformers = rxLocationManager.permissionsMaybeTransformer(this, this))
+            rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, transformers = PermissionRxMaybeTransformer(rxLocationManager, this))
         } else {
             rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER)
         }.testSubscribe("requestLastNetworkLocation")
@@ -89,7 +89,7 @@ class MainActivity : AppCompatActivity(), BasePermissionTransformer.PermissionCa
 
     private fun requestLastNetworkOneMinuteOldLocation() {
         if (checkPermissions) {
-            rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(1, TimeUnit.MINUTES), rxLocationManager.permissionsMaybeTransformer(this, this))
+            rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(1, TimeUnit.MINUTES), PermissionRxMaybeTransformer(rxLocationManager, this))
         } else {
             rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(1, TimeUnit.MINUTES))
         }.testSubscribe("requestLastNetworkOneMinuteOldLocation")
@@ -110,11 +110,9 @@ class MainActivity : AppCompatActivity(), BasePermissionTransformer.PermissionCa
     }
 
     private fun requestBuildIgnoreSecurityError() {
-        val ignoreError = IgnoreErrorTransformer(listOf(SecurityException::class.java))
-
         locationRequestBuilder
-                .addLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(30, TimeUnit.MINUTES), ignoreError)
-                .addRequestLocation(LocationManager.NETWORK_PROVIDER, LocationTime(15, TimeUnit.SECONDS), ignoreError)
+                .addLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(30, TimeUnit.MINUTES), IgnoreErrorMaybeTransformer(SecurityException::class.java))
+                .addRequestLocation(LocationManager.NETWORK_PROVIDER, LocationTime(15, TimeUnit.SECONDS), IgnoreErrorSingleTransformer(SecurityException::class.java))
                 .setDefaultLocation(Location(LocationManager.PASSIVE_PROVIDER))
                 .create()
                 .testSubscribe("requestBuild")

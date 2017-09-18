@@ -10,8 +10,8 @@ import java.util.concurrent.TimeoutException
 /**
  * Abstract class used just to implement rxJava1 and rxJava2
  */
-abstract class BaseRxLocationManager<SINGLE, MAYBE, out BUILDER: BaseLocationRequestBuilder<SINGLE, MAYBE, BUILDER>>(context: Context) {
-    protected val context: Context = context.applicationContext
+abstract class BaseRxLocationManager<SINGLE, MAYBE>(context: Context) {
+    internal val context: Context = context.applicationContext
     protected val locationManager: LocationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
     /**
@@ -44,8 +44,6 @@ abstract class BaseRxLocationManager<SINGLE, MAYBE, out BUILDER: BaseLocationReq
             = baseRequestLocation(provider, timeOut, transformers)
 
     abstract fun onRequestPermissionsResult(permissions: Array<out String>, grantResults: IntArray)
-
-    abstract fun locationRequestBuilder(): BUILDER
 
     protected abstract fun baseGetLastLocation(provider: String, howOldCanBe: LocationTime?, transformers: Array<out RxLocationTransformer<MAYBE>>?): MAYBE
 

@@ -7,7 +7,9 @@ import android.os.Bundle
 import io.reactivex.*
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.functions.Function
+import io.reactivex.internal.functions.Functions
 import io.reactivex.subjects.PublishSubject
+import org.reactivestreams.Subscriber
 import java.util.concurrent.TimeoutException
 
 /**
@@ -80,13 +82,8 @@ class RxLocationManager internal constructor(context: Context,
         permissionResult.onNext(Pair(permissions, grantResults))
     }
 
-    fun permissionsSingleTransformer(context: Context,
-                                     callback: BasePermissionTransformer.PermissionCallback): BasePermissionTransformer<Single<Location>>
-            = PermissionRxSingleTransformer(context, callback, permissionResult)
-
-    fun permissionsMaybeTransformer(context: Context,
-                                    callback: BasePermissionTransformer.PermissionCallback): BasePermissionTransformer<Maybe<Location>>
-            = PermissionRxMaybeTransformer(context, callback, permissionResult)
+    internal fun subscribeToPermissionUpdate(onUpdate: (Pair<Array<out String>, IntArray>) -> Unit)
+            = permissionResult.subscribe(onUpdate, {}, {})
 
     private fun applySchedulers(s: Single<Location>) = s.subscribeOn(scheduler)
 
@@ -96,17 +93,14 @@ class RxLocationManager internal constructor(context: Context,
 /**
  * Implementation of [BaseLocationRequestBuilder] based on rxJava2
  */
-class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationManager) : BaseLocationRequestBuilder<Single<Location>, Maybe<Location>, MaybeTransformer<Location, Location>, LocationRequestBuilder>(rxLocationManager) {
-    constructor(context: Context) : this(RxLocationManager(context))
-
+class LocationRequestBuilder(rxLocationManager: RxLocationManager) : BaseLocationRequestBuilder<Single<Location>, Maybe<Location>, LocationRequestBuilder>(rxLocationManager) {
     private var resultObservable = Observable.empty<Location>()
 
     override fun baseAddRequestLocation(provider: String,
                                         timeOut: LocationTime?,
-                                        transformer: MaybeTransformer<Location, Location>?): LocationRequestBuilder =
-            rxLocationManager.requestLocation(provider, timeOut)
+                                        transformers: Array<out RxLocationTransformer<Single<Location>>>): LocationRequestBuilder =
+            rxLocationManager.requestLocation(provider, timeOut, *transformers)
                     .toMaybe()
-                    .compose { if (transformer != null) it.compose(transformer) else it }
                     .toObservable()
                     .onErrorResumeNext(Function {
                         when (it) {
@@ -121,9 +115,8 @@ class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationM
 
     override fun baseAddLastLocation(provider: String,
                                      howOldCanBe: LocationTime?,
-                                     transformer: MaybeTransformer<Location, Location>?): LocationRequestBuilder =
-            rxLocationManager.getLastLocation(provider, howOldCanBe)
-                    .compose { if (transformer != null) it.compose(transformer) else it }
+                                     transformers: Array<out RxLocationTransformer<Maybe<Location>>>): LocationRequestBuilder =
+            rxLocationManager.getLastLocation(provider, howOldCanBe, *transformers)
                     .toObservable()
                     .onErrorResumeNext(Function {
                         when (it) {
@@ -144,27 +137,5 @@ class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationM
     override fun create(): Maybe<Location> =
             resultObservable.firstElement()
                     .compose { if (defaultLocation != null) it.defaultIfEmpty(defaultLocation) else it }
-}
-
-/**
- * Use it to ignore any described error type.
- *
- * @param errorsToIgnore if null or empty, then ignore all errors, otherwise just described types.
- */
-open class IgnoreErrorTransformer @JvmOverloads constructor(private val errorsToIgnore: List<Class<out Throwable>>? = null) : MaybeTransformer<Location, Location> {
-
-    override fun apply(upstream: Maybe<Location>): MaybeSource<Location> {
-        return upstream.onErrorResumeNext { t: Throwable ->
-            if (errorsToIgnore == null || errorsToIgnore.isEmpty()) {
-                Maybe.empty<Location>()
-            } else {
-                if (errorsToIgnore.contains(t.javaClass)) {
-                    Maybe.empty<Location>()
-                } else {
-                    Maybe.error<Location>(t)
-                }
-            }
-        }
-    }
 }
 

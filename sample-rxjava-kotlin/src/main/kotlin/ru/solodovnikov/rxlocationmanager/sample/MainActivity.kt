@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
     private val rxLocationManager: RxLocationManager by lazy { RxLocationManager(this) }
-    private val locationRequestBuilder: LocationRequestBuilder by lazy { LocationRequestBuilder(this) }
+    private val locationRequestBuilder: LocationRequestBuilder by lazy { LocationRequestBuilder(rxLocationManager) }
 
     private val coordinatorLayout: CoordinatorLayout by lazy { findViewById(R.id.root) as CoordinatorLayout }
 
@@ -87,7 +87,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun requestBuildIgnoreSecurityError() {
-        val ignoreError = IgnoreErrorTransformer(listOf(SecurityException::class.java))
+        val ignoreError = IgnoreErrorTransformer(SecurityException::class.java)
 
         locationRequestBuilder
                 .addLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(30, TimeUnit.MINUTES), ignoreError)

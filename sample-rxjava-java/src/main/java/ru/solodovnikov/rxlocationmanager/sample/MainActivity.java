@@ -18,6 +18,7 @@ import ru.solodovnikov.rxlocationmanager.IgnoreErrorTransformer;
 import ru.solodovnikov.rxlocationmanager.LocationRequestBuilder;
 import ru.solodovnikov.rxlocationmanager.LocationTime;
 import ru.solodovnikov.rxlocationmanager.RxLocationManager;
+import ru.solodovnikov.rxlocationmanager.RxLocationTransformer;
 import rx.Single;
 import rx.functions.Action1;
 
@@ -33,7 +34,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         rxLocationManager = new RxLocationManager(this);
-        locationRequestBuilder = new LocationRequestBuilder(this);
+        locationRequestBuilder = new LocationRequestBuilder(rxLocationManager);
 
         coordinatorLayout = (CoordinatorLayout) findViewById(R.id.root);
 
@@ -92,12 +93,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void requestBuildIgnoreSecurityError() {
-        final Single.Transformer<Location, Location> ignoreError =
-                new IgnoreErrorTransformer(Collections.singletonList(SecurityException.class));
+        final IgnoreErrorTransformer ignoreErrorTransformer = new IgnoreErrorTransformer(SecurityException.class);
 
         final Single<Location> single = locationRequestBuilder
-                .addLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(30, TimeUnit.MINUTES), ignoreError)
-                .addRequestLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(15, TimeUnit.SECONDS), ignoreError)
+                .addLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(30, TimeUnit.MINUTES), ignoreErrorTransformer)
+                .addRequestLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(15, TimeUnit.SECONDS), ignoreErrorTransformer)
                 .setDefaultLocation(new Location(LocationManager.PASSIVE_PROVIDER))
                 .create();
 

@@ -1,19 +1,16 @@
 package ru.solodovnikov.rx2locationmanager
 
-import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Build
 import io.reactivex.Completable
 import io.reactivex.Maybe
 import io.reactivex.Single
-import io.reactivex.subjects.PublishSubject
 import java.util.*
 
-abstract class BasePermissionTransformerImpl<RX>(context: Context,
-                                                 callback: BasePermissionTransformer.PermissionCallback,
-                                                 private val permissionResult: PublishSubject<Pair<Array<out String>, IntArray>>
-) : BasePermissionTransformer<RX>(context, callback) {
+abstract class BasePermissionTransformerImpl<RX>(private val rxLocationManager: RxLocationManager,
+                                                 callback: BasePermissionTransformer.PermissionCallback
+) : BasePermissionTransformer<RX>(rxLocationManager.context, callback) {
 
     protected fun checkPermissions(): Completable =
             Completable.create { emitter ->
@@ -23,7 +20,7 @@ abstract class BasePermissionTransformerImpl<RX>(context: Context,
                     if (deniedP.isNotEmpty()) {
                         callback.requestPermissions(deniedP)
                         //wait until user approve permissions or dispose action
-                        permissionResult.subscribe {
+                        rxLocationManager.subscribeToPermissionUpdate {
                             val resultPermissions = it.first
                             val resultPermissionsResults = it.second
                             if (!Arrays.equals(resultPermissions, deniedP) || resultPermissionsResults.find { it == PackageManager.PERMISSION_DENIED } != null) {
@@ -41,16 +38,45 @@ abstract class BasePermissionTransformerImpl<RX>(context: Context,
             }
 }
 
-internal class PermissionRxSingleTransformer(context: Context,
-                                             callback: BasePermissionTransformer.PermissionCallback,
-                                             permissionResult: PublishSubject<Pair<Array<out String>, IntArray>>
-) : BasePermissionTransformerImpl<Single<Location>>(context, callback, permissionResult) {
+class PermissionRxSingleTransformer(rxLocationManager: RxLocationManager,
+                                    callback: BasePermissionTransformer.PermissionCallback
+) : BasePermissionTransformerImpl<Single<Location>>(rxLocationManager, callback) {
     override fun transform(rx: Single<Location>): Single<Location> = checkPermissions().andThen(rx)
 }
 
-internal class PermissionRxMaybeTransformer(context: Context,
-                                            callback: BasePermissionTransformer.PermissionCallback,
-                                            permissionResult: PublishSubject<Pair<Array<out String>, IntArray>>
-) : BasePermissionTransformerImpl<Maybe<Location>>(context, callback, permissionResult) {
+class PermissionRxMaybeTransformer(rxLocationManager: RxLocationManager,
+                                   callback: BasePermissionTransformer.PermissionCallback
+) : BasePermissionTransformerImpl<Maybe<Location>>(rxLocationManager, callback) {
     override fun transform(rx: Maybe<Location>): Maybe<Location> = checkPermissions().andThen(rx)
+}
+
+abstract class BaseIgnoreErrorTransformer<RX>(protected val errorsToIgnore: Array<out Class<out Throwable>>) : RxLocationTransformer<RX>
+
+/**
+ * Use it to ignore any described error type.
+ *
+ * @param errorsToIgnore if null or empty, then ignore all errors, otherwise just described types.
+ */
+class IgnoreErrorSingleTransformer(vararg errorsToIgnore: Class<out Throwable>
+) : BaseIgnoreErrorTransformer<Single<Location>>(errorsToIgnore) {
+    override fun transform(rx: Single<Location>): Single<Location> =
+            rx.onErrorResumeNext {
+                if (errorsToIgnore.isEmpty() || errorsToIgnore.contains(it.javaClass)) {
+                    IgnorableException()
+                } else {
+                    it
+                }.let { Single.error<Location>(it) }
+            }
+}
+
+class IgnoreErrorMaybeTransformer(vararg errorsToIgnore: Class<out Throwable>
+) : BaseIgnoreErrorTransformer<Maybe<Location>>(errorsToIgnore) {
+    override fun transform(rx: Maybe<Location>): Maybe<Location> =
+            rx.onErrorResumeNext { t: Throwable ->
+                if (errorsToIgnore.isEmpty() || errorsToIgnore.contains(t.javaClass)) {
+                    IgnorableException()
+                } else {
+                    t
+                }.let { Maybe.error<Location>(it) }
+            }
 }

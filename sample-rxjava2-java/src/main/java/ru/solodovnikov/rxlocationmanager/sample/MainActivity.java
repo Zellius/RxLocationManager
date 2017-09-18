@@ -11,16 +11,15 @@ import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 
-import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Maybe;
-import io.reactivex.MaybeTransformer;
 import io.reactivex.Single;
 import io.reactivex.annotations.NonNull;
 import io.reactivex.functions.Action;
 import io.reactivex.functions.Consumer;
-import ru.solodovnikov.rx2locationmanager.IgnoreErrorTransformer;
+import ru.solodovnikov.rx2locationmanager.IgnoreErrorMaybeTransformer;
+import ru.solodovnikov.rx2locationmanager.IgnoreErrorSingleTransformer;
 import ru.solodovnikov.rx2locationmanager.LocationRequestBuilder;
 import ru.solodovnikov.rx2locationmanager.LocationTime;
 import ru.solodovnikov.rx2locationmanager.RxLocationManager;
@@ -37,7 +36,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         rxLocationManager = new RxLocationManager(this);
-        locationRequestBuilder = new LocationRequestBuilder(this);
+        locationRequestBuilder = new LocationRequestBuilder(rxLocationManager);
 
         coordinatorLayout = (CoordinatorLayout) findViewById(R.id.root);
 
@@ -96,12 +95,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void requestBuildIgnoreSecurityError() {
-        final MaybeTransformer<Location, Location> ignoreError =
-                new IgnoreErrorTransformer(Collections.singletonList(SecurityException.class));
-
         final Maybe<Location> maybe = locationRequestBuilder
-                .addLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(30, TimeUnit.MINUTES), ignoreError)
-                .addRequestLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(15, TimeUnit.SECONDS), ignoreError)
+                .addLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(30, TimeUnit.MINUTES), new IgnoreErrorMaybeTransformer(SecurityException.class))
+                .addRequestLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(15, TimeUnit.SECONDS), new IgnoreErrorSingleTransformer(SecurityException.class))
                 .setDefaultLocation(new Location(LocationManager.PASSIVE_PROVIDER))
                 .create();
 

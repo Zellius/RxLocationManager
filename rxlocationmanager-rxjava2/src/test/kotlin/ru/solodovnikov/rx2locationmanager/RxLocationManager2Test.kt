@@ -277,7 +277,7 @@ class RxLocationManager2Test {
                 .thenThrow(ex)
 
         defaultLocationRequestBuilder.addRequestLocation(networkProvider, LocationTime(5, TimeUnit.MILLISECONDS))
-                .addLastLocation(networkProvider, transformer = IgnoreErrorTransformer(listOf(SecurityException::class.java)))
+                .addLastLocation(networkProvider, transformers = IgnoreErrorMaybeTransformer(SecurityException::class.java))
                 .addRequestLocation(LocationManager.GPS_PROVIDER)
                 .setDefaultLocation(location)
                 .create()
@@ -306,7 +306,7 @@ class RxLocationManager2Test {
                 .thenThrow(ex)
 
         defaultLocationRequestBuilder.addRequestLocation(networkProvider, LocationTime(5, TimeUnit.MILLISECONDS))
-                .addLastLocation(networkProvider, transformer = IgnoreErrorTransformer())
+                .addLastLocation(networkProvider, transformers = IgnoreErrorMaybeTransformer())
                 .addRequestLocation(LocationManager.GPS_PROVIDER)
                 .setDefaultLocation(location)
                 .create()
