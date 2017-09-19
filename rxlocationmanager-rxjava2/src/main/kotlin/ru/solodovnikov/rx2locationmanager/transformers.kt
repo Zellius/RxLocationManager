@@ -4,15 +4,22 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Build
-import io.reactivex.Completable
-import io.reactivex.Maybe
-import io.reactivex.Single
+import io.reactivex.*
 import java.util.*
 
-abstract class BasePermissionTransformerImpl<RX>(context: Context,
-                                                 private val rxLocationManager: RxLocationManager,
-                                                 callback: BasePermissionTransformer.PermissionCallback
-) : BasePermissionTransformer<RX>(context, callback) {
+/**
+ * Transformer used to request runtime permissions
+ */
+class PermissionTransformer(context: Context,
+                            private val rxLocationManager: RxLocationManager,
+                            callback: BasePermissionTransformer.PermissionCallback
+) : BasePermissionTransformer(context, callback), SingleTransformer<Location, Location>, MaybeTransformer<Location, Location> {
+
+    override fun apply(upstream: Single<Location>): SingleSource<Location> =
+            checkPermissions().andThen(upstream)
+
+    override fun apply(upstream: Maybe<Location>): MaybeSource<Location> =
+            checkPermissions().andThen(upstream)
 
     protected fun checkPermissions(): Completable =
             Completable.create { emitter ->
@@ -40,47 +47,24 @@ abstract class BasePermissionTransformerImpl<RX>(context: Context,
             }
 }
 
-class PermissionRxSingleTransformer(context: Context,
-                                    rxLocationManager: RxLocationManager,
-                                    callback: BasePermissionTransformer.PermissionCallback
-) : BasePermissionTransformerImpl<Single<Location>>(context, rxLocationManager, callback) {
-    override fun transform(rx: Single<Location>): Single<Location> = checkPermissions().andThen(rx)
-}
-
-class PermissionRxMaybeTransformer(context: Context,
-                                   rxLocationManager: RxLocationManager,
-                                   callback: BasePermissionTransformer.PermissionCallback
-) : BasePermissionTransformerImpl<Maybe<Location>>(context, rxLocationManager, callback) {
-    override fun transform(rx: Maybe<Location>): Maybe<Location> = checkPermissions().andThen(rx)
-}
-
-abstract class BaseIgnoreErrorTransformer<RX>(protected val errorsToIgnore: Array<out Class<out Throwable>>) : RxLocationTransformer<RX>
-
 /**
- * Use it to ignore any described error type.
+ * Transformer Used it to ignore any described error type.
  *
- * @param errorsToIgnore if null or empty, then ignore all errors, otherwise just described types.
+ * @param errorsToIgnore if empty, then ignore all errors, otherwise just described types.
  */
-class IgnoreErrorSingleTransformer(vararg errorsToIgnore: Class<out Throwable>
-) : BaseIgnoreErrorTransformer<Single<Location>>(errorsToIgnore) {
-    override fun transform(rx: Single<Location>): Single<Location> =
-            rx.onErrorResumeNext {
-                if (errorsToIgnore.isEmpty() || errorsToIgnore.contains(it.javaClass)) {
-                    IgnorableException()
-                } else {
-                    it
-                }.let { Single.error<Location>(it) }
-            }
-}
+class IgnoreErrorTransformer(vararg errorsToIgnore: Class<out Throwable>
+) : SingleTransformer<Location, Location>, MaybeTransformer<Location, Location> {
+    private val ignoreError: (Throwable) -> Throwable = {
+        if (errorsToIgnore.isEmpty() || errorsToIgnore.contains(it.javaClass)) {
+            IgnorableException()
+        } else {
+            it
+        }
+    }
 
-class IgnoreErrorMaybeTransformer(vararg errorsToIgnore: Class<out Throwable>
-) : BaseIgnoreErrorTransformer<Maybe<Location>>(errorsToIgnore) {
-    override fun transform(rx: Maybe<Location>): Maybe<Location> =
-            rx.onErrorResumeNext { t: Throwable ->
-                if (errorsToIgnore.isEmpty() || errorsToIgnore.contains(t.javaClass)) {
-                    IgnorableException()
-                } else {
-                    t
-                }.let { Maybe.error<Location>(it) }
-            }
+    override fun apply(upstream: Single<Location>): SingleSource<Location> =
+            upstream.onErrorResumeNext { Single.error<Location>(ignoreError(it)) }
+
+    override fun apply(upstream: Maybe<Location>): MaybeSource<Location> =
+            upstream.onErrorResumeNext { t: Throwable -> Maybe.error<Location>(ignoreError(t)) }
 }

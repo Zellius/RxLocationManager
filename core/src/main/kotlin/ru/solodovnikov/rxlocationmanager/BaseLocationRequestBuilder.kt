@@ -5,8 +5,8 @@ import android.location.Location
 /**
  * Abstract class used just to implement rxJava1 and rxJava2
  */
-abstract class BaseLocationRequestBuilder<SINGLE, MAYBE, out BUILDER : BaseLocationRequestBuilder<SINGLE, MAYBE, BUILDER>>
-(protected val rxLocationManager: BaseRxLocationManager<SINGLE, MAYBE>) {
+abstract class BaseLocationRequestBuilder<SINGLE, MAYBE, SINGLE_TRANSFORMER, MAYBE_TRANSFORMER, out BUILDER : BaseLocationRequestBuilder<SINGLE, MAYBE, SINGLE_TRANSFORMER, MAYBE_TRANSFORMER, BUILDER>>
+(protected val rxLocationManager: BaseRxLocationManager<SINGLE, MAYBE, SINGLE_TRANSFORMER, MAYBE_TRANSFORMER>) {
     protected var defaultLocation: Location? = null
         private set
 
@@ -17,7 +17,7 @@ abstract class BaseLocationRequestBuilder<SINGLE, MAYBE, out BUILDER : BaseLocat
      *
      * @param provider    provider name
      * @param timeOut     request timeout
-     * @param transformer extra transformer
+     * @param transformers extra transformers
      *
      * @return same builder
      * @see baseAddRequestLocation
@@ -25,7 +25,7 @@ abstract class BaseLocationRequestBuilder<SINGLE, MAYBE, out BUILDER : BaseLocat
     @JvmOverloads
     fun addRequestLocation(provider: String,
                            timeOut: LocationTime? = null,
-                           vararg transformers: RxLocationTransformer<SINGLE>): BUILDER =
+                           vararg transformers: SINGLE_TRANSFORMER): BUILDER =
             baseAddRequestLocation(provider, timeOut, transformers)
 
     /**
@@ -35,7 +35,7 @@ abstract class BaseLocationRequestBuilder<SINGLE, MAYBE, out BUILDER : BaseLocat
      *
      * @param provider    provider name
      * @param howOldCanBe how old a location can be
-     * @param transformer extra transformer
+     * @param transformers extra transformers
      *
      * @return same builder
      * @see baseAddLastLocation
@@ -43,7 +43,7 @@ abstract class BaseLocationRequestBuilder<SINGLE, MAYBE, out BUILDER : BaseLocat
     @JvmOverloads
     fun addLastLocation(provider: String,
                         howOldCanBe: LocationTime? = null,
-                        vararg transformers: RxLocationTransformer<MAYBE>): BUILDER =
+                        vararg transformers: MAYBE_TRANSFORMER): BUILDER =
             baseAddLastLocation(provider, howOldCanBe, transformers)
 
 
@@ -60,10 +60,10 @@ abstract class BaseLocationRequestBuilder<SINGLE, MAYBE, out BUILDER : BaseLocat
             }
 
     protected abstract fun baseAddRequestLocation(provider: String, timeOut: LocationTime? = null,
-                                                  transformers: Array<out RxLocationTransformer<SINGLE>>): BUILDER
+                                                  transformers: Array<out SINGLE_TRANSFORMER>): BUILDER
 
     protected abstract fun baseAddLastLocation(provider: String, howOldCanBe: LocationTime? = null,
-                                               transformers: Array<out RxLocationTransformer<MAYBE>>): BUILDER
+                                               transformers: Array<out MAYBE_TRANSFORMER>): BUILDER
 
     /**
      * Construct final observable.

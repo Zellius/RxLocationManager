@@ -5,15 +5,16 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 
-interface RxLocationTransformer<RX> {
-    fun transform(rx: RX): RX
-}
-
-abstract class BasePermissionTransformer<RX>(context: Context,
-                                             protected val callback: BasePermissionTransformer.PermissionCallback
-) : RxLocationTransformer<RX> {
+/**
+ * Base transformer to check and request runtime permissions
+ */
+abstract class BasePermissionTransformer(context: Context,
+                                         protected val callback: BasePermissionTransformer.PermissionCallback) {
     protected val context: Context = context.applicationContext
 
+    /**
+     * @return array of denied permissions of empty array if there is no denied permissions
+     */
     protected fun getDeniedPermissions() =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 arrayOf(Manifest.permission.ACCESS_FINE_LOCATION,
@@ -25,7 +26,15 @@ abstract class BasePermissionTransformer<RX>(context: Context,
                 emptyArray()
             }
 
+    /**
+     * Used by [BasePermissionTransformer] to request permissions from [android.app.Activity]
+     */
     interface PermissionCallback {
+        /**
+         * Called to request permissions
+         * @see android.app.Activity.requestPermissions
+         * @see android.app.Fragment.requestPermissions
+         */
         fun requestPermissions(permissions: Array<String>)
     }
 }

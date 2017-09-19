@@ -8,12 +8,15 @@ import rx.Completable
 import rx.Single
 import java.util.*
 
+/**
+ * Transformer used to request runtime permissions
+ */
 class PermissionTransformer(context: Context,
                             private val rxLocationManager: RxLocationManager,
                             callback: BasePermissionTransformer.PermissionCallback
-) : BasePermissionTransformer<Single<Location>>(context, callback) {
-    override fun transform(rx: Single<Location>): Single<Location> =
-            checkPermissions().andThen(rx)
+) : BasePermissionTransformer(context, callback), Single.Transformer<Location, Location> {
+    override fun call(t: Single<Location>): Single<Location> =
+            checkPermissions().andThen(t)
 
     protected fun checkPermissions(): Completable =
             Completable.fromEmitter { emitter ->
@@ -42,15 +45,15 @@ class PermissionTransformer(context: Context,
 }
 
 /**
- * Use it to ignore any described error type.
+ * Transformer Used it to ignore any described error type.
  *
- * @param errorsToIgnore if null or empty, then ignore all errors, otherwise just described types.
+ * @param errorsToIgnore if empty, then ignore all errors, otherwise just described types.
  */
-class IgnoreErrorTransformer(vararg errorsToIgnore: Class<out Throwable>) : RxLocationTransformer<Single<Location>> {
+class IgnoreErrorTransformer(vararg errorsToIgnore: Class<out Throwable>) : Single.Transformer<Location, Location> {
     private val toIgnore: Array<out Class<out Throwable>> = errorsToIgnore
 
-    override fun transform(rx: Single<Location>): Single<Location> =
-            rx.onErrorResumeNext {
+    override fun call(t: Single<Location>): Single<Location> =
+            t.onErrorResumeNext {
                 if (toIgnore.isEmpty() || toIgnore.contains(it.javaClass)) {
                     IgnorableException()
                 } else {

@@ -11,14 +11,12 @@ import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 
-import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
 import ru.solodovnikov.rxlocationmanager.IgnoreErrorTransformer;
 import ru.solodovnikov.rxlocationmanager.LocationRequestBuilder;
 import ru.solodovnikov.rxlocationmanager.LocationTime;
 import ru.solodovnikov.rxlocationmanager.RxLocationManager;
-import ru.solodovnikov.rxlocationmanager.RxLocationTransformer;
 import rx.Single;
 import rx.functions.Action1;
 

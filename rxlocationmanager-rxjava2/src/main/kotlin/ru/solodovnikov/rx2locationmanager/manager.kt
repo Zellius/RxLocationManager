@@ -7,25 +7,23 @@ import android.os.Bundle
 import io.reactivex.*
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.functions.Function
-import io.reactivex.internal.functions.Functions
 import io.reactivex.subjects.PublishSubject
-import org.reactivestreams.Subscriber
 import java.util.concurrent.TimeoutException
 
 /**
  * Implementation of [BaseRxLocationManager] based on RxJava2
  */
 class RxLocationManager internal constructor(context: Context,
-                                             private val scheduler: Scheduler) : BaseRxLocationManager<Single<Location>, Maybe<Location>>(context) {
+                                             private val scheduler: Scheduler) : BaseRxLocationManager<Single<Location>, Maybe<Location>, SingleTransformer<Location, Location>, MaybeTransformer<Location, Location>>(context) {
     constructor(context: Context) : this(context, AndroidSchedulers.mainThread())
 
-    private val permissionResult by lazy { PublishSubject.create<Pair<Array<out String>, IntArray>>() }
+    private val permissionSubject by lazy { PublishSubject.create<Pair<Array<out String>, IntArray>>() }
 
     /**
      * @return Result [Maybe] will not emit any value if location is null.
      * Or it will be emit [ElderLocationException] if [howOldCanBe] not null and location is too old
      */
-    override fun baseGetLastLocation(provider: String, howOldCanBe: LocationTime?, transformers: Array<out RxLocationTransformer<Maybe<Location>>>?): Maybe<Location> =
+    override fun baseGetLastLocation(provider: String, howOldCanBe: LocationTime?, transformers: Array<out MaybeTransformer<Location, Location>>): Maybe<Location> =
             Maybe.fromCallable { locationManager.getLastKnownLocation(provider) ?: throw ProviderHasNoLastLocationException(provider) }
                     .onErrorComplete { it is ProviderHasNoLastLocationException }
                     .compose {
@@ -38,14 +36,14 @@ class RxLocationManager internal constructor(context: Context,
                         } else {
                             it
                         }
-                    }.let { transformers?.fold(it, { acc, transformer -> transformer.transform(acc) }) ?: it }
+                    }.let { transformers.fold(it, { acc, transformer -> acc.compose(transformer) }) ?: it }
                     .compose { applySchedulers(it) }
 
 
     /**
      * @return Result [Single] can throw [ProviderDisabledException] or [TimeoutException] if [timeOut] not null
      */
-    override fun baseRequestLocation(provider: String, timeOut: LocationTime?, transformers: Array<out RxLocationTransformer<Single<Location>>>?): Single<Location> =
+    override fun baseRequestLocation(provider: String, timeOut: LocationTime?, transformers: Array<out SingleTransformer<Location, Location>>): Single<Location> =
             Single.create(SingleOnSubscribe<Location> {
                 if (locationManager.isProviderEnabled(provider)) {
                     val locationListener = object : LocationListener {
@@ -73,17 +71,17 @@ class RxLocationManager internal constructor(context: Context,
                 }
             }).compose { if (timeOut != null) it.timeout(timeOut.time, timeOut.timeUnit) else it }
                     .let {
-                        transformers?.fold(it, { acc, transformer -> transformer.transform(acc) }) ?: it
+                        transformers.fold(it, { acc, transformer -> acc.compose(transformer) }) ?: it
                     }
                     .compose { applySchedulers(it) }
 
 
     override fun onRequestPermissionsResult(permissions: Array<out String>, grantResults: IntArray) {
-        permissionResult.onNext(Pair(permissions, grantResults))
+        permissionSubject.onNext(Pair(permissions, grantResults))
     }
 
     internal fun subscribeToPermissionUpdate(onUpdate: (Pair<Array<out String>, IntArray>) -> Unit)
-            = permissionResult.subscribe(onUpdate, {}, {})
+            = permissionSubject.subscribe(onUpdate, {}, {})
 
     private fun applySchedulers(s: Single<Location>) = s.subscribeOn(scheduler)
 
@@ -92,13 +90,20 @@ class RxLocationManager internal constructor(context: Context,
 
 /**
  * Implementation of [BaseLocationRequestBuilder] based on rxJava2
+ * @param rxLocationManager manager used in the builder. Used for request runtime permissions.
  */
-class LocationRequestBuilder(rxLocationManager: RxLocationManager) : BaseLocationRequestBuilder<Single<Location>, Maybe<Location>, LocationRequestBuilder>(rxLocationManager) {
+class LocationRequestBuilder(rxLocationManager: RxLocationManager
+) : BaseLocationRequestBuilder<Single<Location>, Maybe<Location>, SingleTransformer<Location, Location>, MaybeTransformer<Location, Location>, LocationRequestBuilder>(rxLocationManager) {
+    /**
+     * Use this constructor if you do not need request runtime permissions
+     */
+    constructor(context: Context) : this(RxLocationManager(context))
+
     private var resultObservable = Observable.empty<Location>()
 
     override fun baseAddRequestLocation(provider: String,
                                         timeOut: LocationTime?,
-                                        transformers: Array<out RxLocationTransformer<Single<Location>>>): LocationRequestBuilder =
+                                        transformers: Array<out SingleTransformer<Location, Location>>): LocationRequestBuilder =
             rxLocationManager.requestLocation(provider, timeOut, *transformers)
                     .toMaybe()
                     .toObservable()
@@ -115,7 +120,7 @@ class LocationRequestBuilder(rxLocationManager: RxLocationManager) : BaseLocatio
 
     override fun baseAddLastLocation(provider: String,
                                      howOldCanBe: LocationTime?,
-                                     transformers: Array<out RxLocationTransformer<Maybe<Location>>>): LocationRequestBuilder =
+                                     transformers: Array<out MaybeTransformer<Location, Location>>): LocationRequestBuilder =
             rxLocationManager.getLastLocation(provider, howOldCanBe, *transformers)
                     .toObservable()
                     .onErrorResumeNext(Function {

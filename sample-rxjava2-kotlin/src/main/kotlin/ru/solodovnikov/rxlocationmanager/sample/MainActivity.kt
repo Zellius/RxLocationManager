@@ -81,7 +81,7 @@ class MainActivity : AppCompatActivity(), BasePermissionTransformer.PermissionCa
 
     private fun requestLastNetworkLocation() {
         if (checkPermissions) {
-            rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, transformers = PermissionRxMaybeTransformer(this, rxLocationManager, this))
+            rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, transformers = PermissionTransformer(this, rxLocationManager, this))
         } else {
             rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER)
         }.testSubscribe("requestLastNetworkLocation")
@@ -89,7 +89,7 @@ class MainActivity : AppCompatActivity(), BasePermissionTransformer.PermissionCa
 
     private fun requestLastNetworkOneMinuteOldLocation() {
         if (checkPermissions) {
-            rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(1, TimeUnit.MINUTES), PermissionRxMaybeTransformer(this, rxLocationManager, this))
+            rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(1, TimeUnit.MINUTES), PermissionTransformer(this, rxLocationManager, this))
         } else {
             rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(1, TimeUnit.MINUTES))
         }.testSubscribe("requestLastNetworkOneMinuteOldLocation")
@@ -110,9 +110,11 @@ class MainActivity : AppCompatActivity(), BasePermissionTransformer.PermissionCa
     }
 
     private fun requestBuildIgnoreSecurityError() {
+        val ignoreError = IgnoreErrorTransformer(SecurityException::class.java)
+
         locationRequestBuilder
-                .addLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(30, TimeUnit.MINUTES), IgnoreErrorMaybeTransformer(SecurityException::class.java))
-                .addRequestLocation(LocationManager.NETWORK_PROVIDER, LocationTime(15, TimeUnit.SECONDS), IgnoreErrorSingleTransformer(SecurityException::class.java))
+                .addLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(30, TimeUnit.MINUTES), ignoreError)
+                .addRequestLocation(LocationManager.NETWORK_PROVIDER, LocationTime(15, TimeUnit.SECONDS), ignoreError)
                 .setDefaultLocation(Location(LocationManager.PASSIVE_PROVIDER))
                 .create()
                 .testSubscribe("requestBuild")

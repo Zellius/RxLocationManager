@@ -18,8 +18,7 @@ import io.reactivex.Single;
 import io.reactivex.annotations.NonNull;
 import io.reactivex.functions.Action;
 import io.reactivex.functions.Consumer;
-import ru.solodovnikov.rx2locationmanager.IgnoreErrorMaybeTransformer;
-import ru.solodovnikov.rx2locationmanager.IgnoreErrorSingleTransformer;
+import ru.solodovnikov.rx2locationmanager.IgnoreErrorTransformer;
 import ru.solodovnikov.rx2locationmanager.LocationRequestBuilder;
 import ru.solodovnikov.rx2locationmanager.LocationTime;
 import ru.solodovnikov.rx2locationmanager.RxLocationManager;
@@ -95,9 +94,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void requestBuildIgnoreSecurityError() {
+        final IgnoreErrorTransformer ignoreErrorTransformer = new IgnoreErrorTransformer(SecurityException.class);
+
         final Maybe<Location> maybe = locationRequestBuilder
-                .addLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(30, TimeUnit.MINUTES), new IgnoreErrorMaybeTransformer(SecurityException.class))
-                .addRequestLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(15, TimeUnit.SECONDS), new IgnoreErrorSingleTransformer(SecurityException.class))
+                .addLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(30, TimeUnit.MINUTES), ignoreErrorTransformer)
+                .addRequestLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(15, TimeUnit.SECONDS), ignoreErrorTransformer)
                 .setDefaultLocation(new Location(LocationManager.PASSIVE_PROVIDER))
                 .create();
 
