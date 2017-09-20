@@ -7,6 +7,8 @@ import android.os.Build
 
 /**
  * Base transformer to check and request runtime permissions
+ * @param context any [Context] of your application
+ * @param callback used to request permissions from [android.app.Activity]
  */
 abstract class BasePermissionTransformer(context: Context,
                                          protected val callback: BasePermissionTransformer.PermissionCallback) {

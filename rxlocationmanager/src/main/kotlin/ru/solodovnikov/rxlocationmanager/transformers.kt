@@ -14,23 +14,27 @@ import java.util.*
 class PermissionTransformer(context: Context,
                             private val rxLocationManager: RxLocationManager,
                             callback: BasePermissionTransformer.PermissionCallback
-) : BasePermissionTransformer(context, callback), Single.Transformer<Location, Location> {
+) : BasePermissionTransformer(context, callback),
+        Single.Transformer<Location, Location> {
+
     override fun call(t: Single<Location>): Single<Location> =
             checkPermissions().andThen(t)
 
     protected fun checkPermissions(): Completable =
             Completable.fromEmitter { emitter ->
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    val deniedP = getDeniedPermissions()
+                    val deniedPermissions = getDeniedPermissions()
 
-                    if (deniedP.isNotEmpty()) {
-                        callback.requestPermissions(deniedP)
+                    if (deniedPermissions.isNotEmpty()) {
+                        callback.requestPermissions(deniedPermissions)
                         //wait until user approve permissions or dispose action
                         rxLocationManager.subscribeToPermissionUpdate {
                             val resultPermissions = it.first
                             val resultPermissionsResults = it.second
-                            if (!Arrays.equals(resultPermissions, deniedP) || resultPermissionsResults.find { it == PackageManager.PERMISSION_DENIED } != null) {
-                                emitter.onError(SecurityException("User denied permissions: ${deniedP.asList()}"))
+                            if (!Arrays.equals(resultPermissions, deniedPermissions) ||
+                                    resultPermissionsResults
+                                            .find { it == PackageManager.PERMISSION_DENIED } != null) {
+                                emitter.onError(SecurityException("User denied permissions: ${deniedPermissions.asList()}"))
                             } else {
                                 emitter.onCompleted()
                             }
@@ -49,7 +53,8 @@ class PermissionTransformer(context: Context,
  *
  * @param errorsToIgnore if empty, then ignore all errors, otherwise just described types.
  */
-class IgnoreErrorTransformer(vararg errorsToIgnore: Class<out Throwable>) : Single.Transformer<Location, Location> {
+class IgnoreErrorTransformer(vararg errorsToIgnore: Class<out Throwable>
+) : Single.Transformer<Location, Location> {
     private val toIgnore: Array<out Class<out Throwable>> = errorsToIgnore
 
     override fun call(t: Single<Location>): Single<Location> =

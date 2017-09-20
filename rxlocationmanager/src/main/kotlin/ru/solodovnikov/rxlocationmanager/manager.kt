@@ -18,7 +18,12 @@ import java.util.concurrent.TimeoutException
  * Implementation of [BaseRxLocationManager] based on RxJava1
  */
 class RxLocationManager internal constructor(context: Context,
-                                             private val scheduler: Scheduler) : BaseRxLocationManager<Single<Location>, Single<Location>, Single.Transformer<Location, Location>, Single.Transformer<Location, Location>>(context) {
+                                             private val scheduler: Scheduler
+) : BaseRxLocationManager<Single<Location>,
+        Single<Location>,
+        Single.Transformer<Location, Location>,
+        Single.Transformer<Location, Location>>(context) {
+
     constructor(context: Context) : this(context, AndroidSchedulers.mainThread())
 
     private val permissionSubject by lazy { PublishSubject.create<Pair<Array<out String>, IntArray>>() }
@@ -104,7 +109,11 @@ class RxLocationManager internal constructor(context: Context,
  * @param rxLocationManager manager used in the builder. Used for request runtime permissions.
  */
 class LocationRequestBuilder(rxLocationManager: RxLocationManager
-) : BaseLocationRequestBuilder<Single<Location>, Single<Location>, Single.Transformer<Location, Location>, Single.Transformer<Location, Location>, LocationRequestBuilder>(rxLocationManager) {
+) : BaseLocationRequestBuilder<Single<Location>,
+        Single<Location>,
+        Single.Transformer<Location, Location>,
+        Single.Transformer<Location, Location>,
+        LocationRequestBuilder>(rxLocationManager) {
     /**
      * Use this constructor if you do not need request runtime permissions
      */

@@ -13,7 +13,9 @@ import java.util.*
 class PermissionTransformer(context: Context,
                             private val rxLocationManager: RxLocationManager,
                             callback: BasePermissionTransformer.PermissionCallback
-) : BasePermissionTransformer(context, callback), SingleTransformer<Location, Location>, MaybeTransformer<Location, Location> {
+) : BasePermissionTransformer(context, callback),
+        SingleTransformer<Location, Location>,
+        MaybeTransformer<Location, Location> {
 
     override fun apply(upstream: Single<Location>): SingleSource<Location> =
             checkPermissions().andThen(upstream)
@@ -24,16 +26,17 @@ class PermissionTransformer(context: Context,
     protected fun checkPermissions(): Completable =
             Completable.create { emitter ->
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    val deniedP = getDeniedPermissions()
+                    val deniedPermissions = getDeniedPermissions()
 
-                    if (deniedP.isNotEmpty()) {
-                        callback.requestPermissions(deniedP)
+                    if (deniedPermissions.isNotEmpty()) {
+                        callback.requestPermissions(deniedPermissions)
                         //wait until user approve permissions or dispose action
                         rxLocationManager.subscribeToPermissionUpdate {
                             val resultPermissions = it.first
                             val resultPermissionsResults = it.second
-                            if (!Arrays.equals(resultPermissions, deniedP) || resultPermissionsResults.find { it == PackageManager.PERMISSION_DENIED } != null) {
-                                emitter.onError(SecurityException("User denied permissions: ${deniedP.asList()}"))
+                            if (!Arrays.equals(resultPermissions, deniedPermissions) ||
+                                    resultPermissionsResults.find { it == PackageManager.PERMISSION_DENIED } != null) {
+                                emitter.onError(SecurityException("User denied permissions: ${deniedPermissions.asList()}"))
                             } else {
                                 emitter.onComplete()
                             }
