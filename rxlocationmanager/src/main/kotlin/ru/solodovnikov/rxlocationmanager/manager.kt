@@ -148,7 +148,7 @@ class LocationRequestBuilder(rxLocationManager: RxLocationManager
      * @param provider    provider name
      * @param timeOut     request timeout
      * @param isNullValid if true, then this request can emit null value
-     * @param transformer extra transformer
+     * @param transformers extra transformer
      *
      * @return same builder
      * @see baseAddRequestLocation
@@ -180,7 +180,7 @@ class LocationRequestBuilder(rxLocationManager: RxLocationManager
      * @param provider    provider name
      * @param howOldCanBe optional. How old a location can be
      * @param isNullValid if true, then this request can emit null value
-     * @param transformer optional extra transformer
+     * @param transformers optional extra transformer
      *
      * @return same builder
      * @see baseAddLastLocation

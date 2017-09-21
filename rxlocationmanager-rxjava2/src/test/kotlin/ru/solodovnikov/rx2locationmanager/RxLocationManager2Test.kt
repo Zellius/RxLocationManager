@@ -5,13 +5,12 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Build
+import com.nhaarman.mockito_kotlin.*
 import io.reactivex.schedulers.Schedulers
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.ArgumentCaptor
 import org.mockito.Mock
-import org.mockito.Mockito.*
 import org.mockito.MockitoAnnotations
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -39,7 +38,7 @@ class RxLocationManager2Test {
     @Before
     fun setUp() {
         MockitoAnnotations.initMocks(this)
-        `when`(context.getSystemService(eq(Context.LOCATION_SERVICE)))
+        whenever(context.getSystemService(eq(Context.LOCATION_SERVICE)))
                 .thenReturn(locationManager)
     }
 
@@ -50,7 +49,7 @@ class RxLocationManager2Test {
     fun testGetLastLocation_Success() {
         val expectedLocation = buildFakeLocation()
 
-        `when`(locationManager.getLastKnownLocation(networkProvider)).thenReturn(expectedLocation)
+        whenever(locationManager.getLastKnownLocation(networkProvider)).thenReturn(expectedLocation)
 
         defaultRxLocationManager.getLastLocation(networkProvider)
                 .test()
@@ -65,7 +64,7 @@ class RxLocationManager2Test {
      */
     @Test
     fun testGetLastLocation_Old() {
-        `when`(locationManager.getLastKnownLocation(networkProvider))
+        whenever(locationManager.getLastKnownLocation(networkProvider))
                 .thenReturn(buildFakeLocation()
                         .apply { time = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1) })
 
@@ -82,7 +81,7 @@ class RxLocationManager2Test {
     fun testGetLastLocation_NotOld() {
         val expectedLocation = buildFakeLocation()
 
-        `when`(locationManager.getLastKnownLocation(networkProvider))
+        whenever(locationManager.getLastKnownLocation(networkProvider))
                 .thenReturn(expectedLocation)
 
         defaultRxLocationManager.getLastLocation(networkProvider, LocationTime(30, TimeUnit.MINUTES))
@@ -98,7 +97,7 @@ class RxLocationManager2Test {
      */
     @Test
     fun testGetLastLocation_NoLocation() {
-        `when`(locationManager.getLastKnownLocation(networkProvider))
+        whenever(locationManager.getLastKnownLocation(networkProvider))
                 .thenReturn(null)
 
         defaultRxLocationManager.getLastLocation(networkProvider)
@@ -120,13 +119,12 @@ class RxLocationManager2Test {
         defaultRxLocationManager.requestLocation(networkProvider)
                 .subscribe()
                 .also { disposable ->
-                    ArgumentCaptor.forClass(LocationListener::class.java)
-                            .apply {
-                                verify(locationManager).requestSingleUpdate(eq(networkProvider), capture(), isNull())
-                                assertNotNull(value)
-                                disposable.dispose()
-                                verify(locationManager, times(1)).removeUpdates(eq(value))
-                            }
+                    argumentCaptor<LocationListener>().apply {
+                        verify(locationManager).requestSingleUpdate(eq(networkProvider), capture(), isNull())
+                        assertNotNull(firstValue)
+                        disposable.dispose()
+                        verify(locationManager, times(1)).removeUpdates(eq(firstValue))
+                    }
                 }
     }
 
@@ -143,7 +141,7 @@ class RxLocationManager2Test {
             val locationListener = args[1] as LocationListener
             locationListener.onLocationChanged(expectedLocation)
             return@doAnswer null
-        }.`when`(locationManager).requestSingleUpdate(eq(networkProvider), any(), any())
+        }.whenever(locationManager).requestSingleUpdate(eq(networkProvider), any(), isNull())
 
         defaultRxLocationManager.requestLocation(networkProvider)
                 .test()
@@ -194,7 +192,7 @@ class RxLocationManager2Test {
         //set provider enabled
         setIsProviderEnabled(isEnabled = true)
 
-        `when`(locationManager.getLastKnownLocation(eq(networkProvider)))
+        whenever(locationManager.getLastKnownLocation(eq(networkProvider)))
                 .thenReturn(null)
 
         defaultLocationRequestBuilder.addRequestLocation(networkProvider, LocationTime(5, TimeUnit.MILLISECONDS))
@@ -246,7 +244,7 @@ class RxLocationManager2Test {
 
         val e = SecurityException()
 
-        `when`(locationManager.getLastKnownLocation(eq(networkProvider)))
+        whenever(locationManager.getLastKnownLocation(eq(networkProvider)))
                 .thenThrow(e)
 
         defaultLocationRequestBuilder.addRequestLocation(networkProvider, LocationTime(5, TimeUnit.MILLISECONDS))
@@ -273,7 +271,7 @@ class RxLocationManager2Test {
         val location = buildFakeLocation()
         val ex = SecurityException()
 
-        `when`(locationManager.getLastKnownLocation(eq(networkProvider)))
+        whenever(locationManager.getLastKnownLocation(eq(networkProvider)))
                 .thenThrow(ex)
 
         defaultLocationRequestBuilder.addRequestLocation(networkProvider, LocationTime(5, TimeUnit.MILLISECONDS))
@@ -302,7 +300,7 @@ class RxLocationManager2Test {
         val location = buildFakeLocation()
         val ex = SecurityException()
 
-        `when`(locationManager.getLastKnownLocation(eq(networkProvider)))
+        whenever(locationManager.getLastKnownLocation(eq(networkProvider)))
                 .thenThrow(ex)
 
         defaultLocationRequestBuilder.addRequestLocation(networkProvider, LocationTime(5, TimeUnit.MILLISECONDS))
@@ -333,8 +331,33 @@ class RxLocationManager2Test {
                 .assertValue(location)
     }
 
+    /**
+     * Test [PermissionTransformer]
+     */
+    @Test
+    fun test_PermissionTransformer() {
+        val callback: BasePermissionTransformer.PermissionCallback = mock()
+        val applicationContext: Context = mock()
+
+        val location = buildFakeLocation()
+
+        whenever(context.applicationContext)
+                .thenReturn(applicationContext)
+        whenever(locationManager.getLastKnownLocation(eq(networkProvider)))
+                .thenReturn(location)
+
+        defaultRxLocationManager.getLastLocation(networkProvider, transformers = PermissionTransformer(context, defaultRxLocationManager, callback))
+                .test()
+                .await()
+                .assertNoErrors()
+                .assertComplete()
+                .assertValue(location)
+
+        verify(callback, never()).requestPermissions(any())
+    }
+
     private fun setIsProviderEnabled(provider: String = networkProvider, isEnabled: Boolean = false) {
-        `when`(locationManager.isProviderEnabled(eq(provider))).thenReturn(isEnabled)
+        whenever(locationManager.isProviderEnabled(eq(provider))).thenReturn(isEnabled)
     }
 
     private fun buildFakeLocation(provider: String = networkProvider) =

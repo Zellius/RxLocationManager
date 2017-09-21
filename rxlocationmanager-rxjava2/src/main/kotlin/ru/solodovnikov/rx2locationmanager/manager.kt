@@ -109,7 +109,9 @@ class LocationRequestBuilder(rxLocationManager: RxLocationManager
                     .toObservable()
                     .onErrorResumeNext(Function {
                         when (it) {
-                            is TimeoutException, is ProviderDisabledException -> Observable.empty<Location>()
+                            is TimeoutException,
+                            is ProviderDisabledException,
+                            is IgnorableException -> Observable.empty<Location>()
                             else -> Observable.error<Location>(it)
                         }
                     })
@@ -125,7 +127,8 @@ class LocationRequestBuilder(rxLocationManager: RxLocationManager
                     .toObservable()
                     .onErrorResumeNext(Function {
                         when (it) {
-                            is ElderLocationException -> Observable.empty<Location>()
+                            is ElderLocationException,
+                            is IgnorableException -> Observable.empty<Location>()
                             else -> Observable.error<Location>(it)
                         }
                     })

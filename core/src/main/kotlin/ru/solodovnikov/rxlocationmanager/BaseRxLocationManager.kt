@@ -11,7 +11,6 @@ import java.util.concurrent.TimeoutException
  * Abstract class used just to implement rxJava1 and rxJava2
  */
 abstract class BaseRxLocationManager<out SINGLE, out MAYBE, in SINGLE_TRANSFORMER, in MAYBE_TRANSFORMER>(context: Context) {
-    protected val context: Context = context.applicationContext
     protected val locationManager: LocationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
     /**

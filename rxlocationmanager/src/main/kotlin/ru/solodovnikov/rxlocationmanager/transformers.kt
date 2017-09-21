@@ -6,21 +6,28 @@ import android.location.Location
 import android.os.Build
 import rx.Completable
 import rx.Single
+import rx.Subscription
 import java.util.*
 
 /**
  * Transformer used to request runtime permissions
+ *
+ * Call [RxLocationManager.onRequestPermissionsResult] inside your [android.app.Activity.onRequestPermissionsResult]
+ * to get request permissions results in the transformer.
  */
-class PermissionTransformer(context: Context,
-                            private val rxLocationManager: RxLocationManager,
-                            callback: BasePermissionTransformer.PermissionCallback
+open class PermissionTransformer(context: Context,
+                                 private val rxLocationManager: RxLocationManager,
+                                 callback: BasePermissionTransformer.PermissionCallback
 ) : BasePermissionTransformer(context, callback),
         Single.Transformer<Location, Location> {
 
     override fun call(t: Single<Location>): Single<Location> =
             checkPermissions().andThen(t)
 
-    protected fun checkPermissions(): Completable =
+    /**
+     * Construct [Completable] which check runtime permissions
+     */
+    protected open fun checkPermissions(): Completable =
             Completable.fromEmitter { emitter ->
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     val deniedPermissions = getDeniedPermissions()
@@ -28,7 +35,7 @@ class PermissionTransformer(context: Context,
                     if (deniedPermissions.isNotEmpty()) {
                         callback.requestPermissions(deniedPermissions)
                         //wait until user approve permissions or dispose action
-                        rxLocationManager.subscribeToPermissionUpdate {
+                        subscribeToPermissionUpdate {
                             val resultPermissions = it.first
                             val resultPermissionsResults = it.second
                             if (!Arrays.equals(resultPermissions, deniedPermissions) ||
@@ -46,10 +53,16 @@ class PermissionTransformer(context: Context,
                     emitter.onCompleted()
                 }
             }
+
+    /**
+     * Subscribe to request permissions result
+     */
+    protected fun subscribeToPermissionUpdate(onUpdate: (Pair<Array<out String>, IntArray>) -> Unit): Subscription =
+            rxLocationManager.subscribeToPermissionUpdate(onUpdate)
 }
 
 /**
- * Transformer Used it to ignore any described error type.
+ * Transformer used to ignore any described error type.
  *
  * @param errorsToIgnore if empty, then ignore all errors, otherwise just described types.
  */

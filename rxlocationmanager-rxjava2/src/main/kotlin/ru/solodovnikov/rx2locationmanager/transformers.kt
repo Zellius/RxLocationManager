@@ -5,14 +5,18 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Build
 import io.reactivex.*
+import io.reactivex.disposables.Disposable
 import java.util.*
 
 /**
  * Transformer used to request runtime permissions
+ *
+ * Call [RxLocationManager.onRequestPermissionsResult] inside your [android.app.Activity.onRequestPermissionsResult]
+ * to get request permissions results in the transformer.
  */
-class PermissionTransformer(context: Context,
-                            private val rxLocationManager: RxLocationManager,
-                            callback: BasePermissionTransformer.PermissionCallback
+open class PermissionTransformer(context: Context,
+                                 private val rxLocationManager: RxLocationManager,
+                                 callback: BasePermissionTransformer.PermissionCallback
 ) : BasePermissionTransformer(context, callback),
         SingleTransformer<Location, Location>,
         MaybeTransformer<Location, Location> {
@@ -23,7 +27,10 @@ class PermissionTransformer(context: Context,
     override fun apply(upstream: Maybe<Location>): MaybeSource<Location> =
             checkPermissions().andThen(upstream)
 
-    protected fun checkPermissions(): Completable =
+    /**
+     * Construct [Completable] which check runtime permissions
+     */
+    protected open fun checkPermissions(): Completable =
             Completable.create { emitter ->
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     val deniedPermissions = getDeniedPermissions()
@@ -31,7 +38,7 @@ class PermissionTransformer(context: Context,
                     if (deniedPermissions.isNotEmpty()) {
                         callback.requestPermissions(deniedPermissions)
                         //wait until user approve permissions or dispose action
-                        rxLocationManager.subscribeToPermissionUpdate {
+                        subscribeToPermissionUpdate {
                             val resultPermissions = it.first
                             val resultPermissionsResults = it.second
                             if (!Arrays.equals(resultPermissions, deniedPermissions) ||
@@ -48,10 +55,16 @@ class PermissionTransformer(context: Context,
                     emitter.onComplete()
                 }
             }
+
+    /**
+     * Subscribe to request permissions result
+     */
+    protected fun subscribeToPermissionUpdate(onUpdate: (Pair<Array<out String>, IntArray>) -> Unit): Disposable =
+            rxLocationManager.subscribeToPermissionUpdate(onUpdate)
 }
 
 /**
- * Transformer Used it to ignore any described error type.
+ * Transformer used to ignore any described error type.
  *
  * @param errorsToIgnore if empty, then ignore all errors, otherwise just described types.
  */
