@@ -69,9 +69,18 @@ locationRequestBuilder.addLastLocation(LocationManager.NETWORK_PROVIDER, new Loc
                 .create()
                 .subscribe();
 ```
-> **Note:** By default the LocationRequestBuilder will ignore any library exceptions, but will throw any other. You can use a transformer to change it. The code below will ignore any error.
+#### Transformers
+You can transform every location request by using one of the build in transformers or implement your own.
+###### IgnoreErrorTransformer:
+By default the LocationRequestBuilder will ignore any library exceptions, but will throw any other. You can use a transformer to change it. The code below will ignore any error.
 ```java
-addLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(30, TimeUnit.MINUTES), new IgnoreErrorTransformer(null))
+addLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(30, TimeUnit.MINUTES), new IgnoreErrorTransformer())
+```
+###### PermissionTransformer:
+This transformer will check and request needed runtime permissions before any location request.
+Just add it to the request and call **rxLocationManager.onRequestPermissionsResult**.
+```java
+rxLocationManager.requestLocation(LocationManager.NETWORK_PROVIDER, new PermissionTransformer(context, rxLocationManager, callback))
 ```
 ## Download
 ##### rxJava1
