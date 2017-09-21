@@ -25,7 +25,6 @@ abstract class BaseRxLocationManager<out SINGLE, out MAYBE, in SINGLE_TRANSFORME
      * @see ProviderHasNoLastLocationException
      */
     @JvmOverloads
-    @SuppressWarnings
     fun getLastLocation(provider: String,
                         howOldCanBe: LocationTime? = null,
                         vararg transformers: MAYBE_TRANSFORMER): MAYBE =

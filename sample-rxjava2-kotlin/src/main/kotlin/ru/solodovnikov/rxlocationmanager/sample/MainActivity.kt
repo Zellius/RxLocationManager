@@ -96,17 +96,28 @@ class MainActivity : AppCompatActivity(), BasePermissionTransformer.PermissionCa
     }
 
     private fun requestLocation() {
-        rxLocationManager.requestLocation(LocationManager.NETWORK_PROVIDER, LocationTime(15, TimeUnit.SECONDS))
-                .testSubscribe("requestLocation")
+        if (checkPermissions) {
+            rxLocationManager.requestLocation(LocationManager.NETWORK_PROVIDER, LocationTime(15, TimeUnit.SECONDS), PermissionTransformer(this, rxLocationManager, this))
+        } else {
+            rxLocationManager.requestLocation(LocationManager.NETWORK_PROVIDER, LocationTime(15, TimeUnit.SECONDS))
+        }.testSubscribe("requestLocation")
     }
 
     private fun requestBuild() {
-        locationRequestBuilder
-                .addLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(30, TimeUnit.MINUTES))
-                .addRequestLocation(LocationManager.NETWORK_PROVIDER, LocationTime(15, TimeUnit.SECONDS))
-                .setDefaultLocation(Location(LocationManager.PASSIVE_PROVIDER))
-                .create()
-                .testSubscribe("requestBuild")
+        if (checkPermissions) {
+            val permissionTransformer = PermissionTransformer(this, rxLocationManager, this)
+            locationRequestBuilder
+                    .addLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(30, TimeUnit.MINUTES), permissionTransformer)
+                    .addRequestLocation(LocationManager.NETWORK_PROVIDER, LocationTime(15, TimeUnit.SECONDS), permissionTransformer)
+                    .setDefaultLocation(Location(LocationManager.PASSIVE_PROVIDER))
+                    .create()
+        } else {
+            locationRequestBuilder
+                    .addLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(30, TimeUnit.MINUTES))
+                    .addRequestLocation(LocationManager.NETWORK_PROVIDER, LocationTime(15, TimeUnit.SECONDS))
+                    .setDefaultLocation(Location(LocationManager.PASSIVE_PROVIDER))
+                    .create()
+        }.testSubscribe("requestBuild")
     }
 
     private fun requestBuildIgnoreSecurityError() {

@@ -5,9 +5,6 @@ buildscript {
     repositories {
         jcenter()
         mavenCentral()
-        maven {
-            url = 'https://dl.bintray.com/kotlin/kotlin-dev/'
-        }
     }
 
     dependencies {
@@ -16,8 +13,7 @@ buildscript {
         classpath 'org.kt3k.gradle.plugin:coveralls-gradle-plugin:2.8.1'
         classpath 'com.github.dcendents:android-maven-gradle-plugin:1.5'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        //TODO https://github.com/Kotlin/dokka/issues/140
-        classpath 'org.jetbrains.dokka:dokka-android-gradle-plugin:0.9.14-eap-3'
+        classpath 'org.jetbrains.dokka:dokka-android-gradle-plugin:0.9.15'
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files

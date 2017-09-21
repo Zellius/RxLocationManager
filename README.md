@@ -1,13 +1,14 @@
 # RxLocationManager
 [![Android Arsenal](https://img.shields.io/badge/Android%20Arsenal-RxLocationManager-orange.svg?style=flat)](http://android-arsenal.com/details/1/3291) [![Build Status](https://travis-ci.org/Zellius/RxLocationManager.svg?branch=master)](https://travis-ci.org/Zellius/RxLocationManager) [![Coverage Status](https://coveralls.io/repos/github/Zellius/RxLocationManager/badge.svg?branch=master&bust=1)](https://coveralls.io/github/Zellius/RxLocationManager?branch=master) ![Android Version](https://img.shields.io/badge/android-9+-blue.svg)
 
-Android library that helps to get location using standart LocationManager, [RxJava](https://github.com/ReactiveX/RxJava) (1 and 2) and [Kotlin](https://kotlinlang.org/). It does not use the Google Play Services and it's easier to use.
+Android library that helps to get location using standard [LocationManager](https://developer.android.com/reference/android/location/LocationManager.html), [RxJava](https://github.com/ReactiveX/RxJava) (1 and 2) and [Kotlin](https://kotlinlang.org/). It does not use the Google Play Services and it's easier to use.
 
 ## Features
  * The library have rxJava and rxJava2 implementations. It is writen in Kotlin, so you can use it in your projects with full language support.
  * Get last known device location from any location provider. You can specify how old Location can be. For example you want only those locations that have been received up to 30 minutes ago.
  * Request current device location. You can specify how long the request will continue. After that Observable will be unsubscribed automatically.
  * You can use LocationRequestBuilder to build sequence of location requests.
+ * Check and request runtime permissions in the RxJava chain. See **PermissionTransformer**.
  * All methods will return an rxJava objects (Single, Maybe, etc.), so you can perform transofrm/map... etc methods on it.
  * No need to check is Google Play Services valid or installed on device. 
 

@@ -3,9 +3,11 @@ package ru.solodovnikov.rxlocationmanager.sample;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
@@ -13,18 +15,24 @@ import android.view.MenuItem;
 
 import java.util.concurrent.TimeUnit;
 
+import ru.solodovnikov.rxlocationmanager.BasePermissionTransformer;
 import ru.solodovnikov.rxlocationmanager.IgnoreErrorTransformer;
 import ru.solodovnikov.rxlocationmanager.LocationRequestBuilder;
 import ru.solodovnikov.rxlocationmanager.LocationTime;
+import ru.solodovnikov.rxlocationmanager.PermissionTransformer;
 import ru.solodovnikov.rxlocationmanager.RxLocationManager;
 import rx.Single;
 import rx.functions.Action1;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements BasePermissionTransformer.PermissionCallback {
+    private static final int REQUEST_CODE_LOCATION_PERMISSIONS = 150;
+
     private RxLocationManager rxLocationManager;
     private LocationRequestBuilder locationRequestBuilder;
 
     private CoordinatorLayout coordinatorLayout;
+
+    private boolean checkPermissions = false;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -48,6 +56,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
+            case R.id.check_permissions:
+                item.setChecked(!item.isChecked());
+                checkPermissions = item.isChecked();
+                return true;
             case R.id.last_network:
                 requestLastNetworkLocation();
                 return true;
@@ -68,26 +80,69 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_CODE_LOCATION_PERMISSIONS) {
+            rxLocationManager.onRequestPermissionsResult(permissions, grantResults);
+        }
+    }
+
+    @Override
+    public void requestPermissions(@NonNull String[] permissions) {
+        ActivityCompat.requestPermissions(this, permissions, REQUEST_CODE_LOCATION_PERMISSIONS);
+    }
+
     private void requestLastNetworkLocation() {
-        testSubscribe(rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER), "requestLastNetworkLocation");
+        final Single<Location> rx;
+        if (checkPermissions) {
+            rx = rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, new PermissionTransformer(this, rxLocationManager, this));
+        } else {
+            rx = rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER);
+        }
+        testSubscribe(rx, "requestLastNetworkLocation");
     }
 
     private void requestLastNetworkOneMinuteOldLocation() {
-        testSubscribe(rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(1, TimeUnit.MINUTES)), "requestLastNetworkOneMinuteOldLocation");
+        final Single<Location> rx;
+        if (checkPermissions) {
+            rx = rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(1, TimeUnit.MINUTES), new PermissionTransformer(this, rxLocationManager, this));
+        } else {
+            rx = rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(1, TimeUnit.MINUTES));
+        }
+
+        testSubscribe(rx, "requestLastNetworkOneMinuteOldLocation");
     }
 
     private void requestLocation() {
-        testSubscribe(rxLocationManager.requestLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(15, TimeUnit.SECONDS)), "requestLocation");
+        final Single<Location> rx;
+        if (checkPermissions) {
+            rx = rxLocationManager.requestLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(15, TimeUnit.SECONDS), new PermissionTransformer(this, rxLocationManager, this));
+        } else {
+            rx = rxLocationManager.requestLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(15, TimeUnit.SECONDS));
+        }
+        testSubscribe(rx, "requestLocation");
     }
 
     private void requestBuild() {
-        final Single<Location> single = locationRequestBuilder
-                .addLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(30, TimeUnit.MINUTES))
-                .addRequestLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(15, TimeUnit.SECONDS))
-                .setDefaultLocation(new Location(LocationManager.PASSIVE_PROVIDER))
-                .create();
+        final Single<Location> rx;
+        if (checkPermissions) {
+            final PermissionTransformer permissionTransformer = new PermissionTransformer(this, rxLocationManager, this);
 
-        testSubscribe(single, "requestBuild");
+            rx = locationRequestBuilder
+                    .addLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(30, TimeUnit.MINUTES), permissionTransformer)
+                    .addRequestLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(15, TimeUnit.SECONDS), permissionTransformer)
+                    .setDefaultLocation(new Location(LocationManager.PASSIVE_PROVIDER))
+                    .create();
+        } else {
+            rx = locationRequestBuilder
+                    .addLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(30, TimeUnit.MINUTES))
+                    .addRequestLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(15, TimeUnit.SECONDS))
+                    .setDefaultLocation(new Location(LocationManager.PASSIVE_PROVIDER))
+                    .create();
+        }
+
+        testSubscribe(rx, "requestBuild");
     }
 
     private void requestBuildIgnoreSecurityError() {
