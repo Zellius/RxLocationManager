@@ -3,6 +3,7 @@ package ru.solodovnikov.rxlocationmanager
 import android.Manifest
 import android.annotation.TargetApi
 import android.content.Context
+import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
@@ -35,20 +36,33 @@ class RxLocationManagerTestM {
     @Before
     fun setUp() {
         MockitoAnnotations.initMocks(this)
-        whenever(context.getSystemService(eq(Context.LOCATION_SERVICE)))
-                .thenReturn(locationManager)
+
+        val stubPackageName = "com.package.name"
+
+        val mockedAplicationContext = mock<Context> {
+            on { packageName } doReturn stubPackageName
+        }
+
+        val mockedPackageManager = mock<PackageManager> {
+            on { getPackageInfo(eq(stubPackageName), eq(PackageManager.GET_PERMISSIONS)) } doReturn
+                    PackageInfo().apply {
+                        requestedPermissions = arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION,
+                                Manifest.permission.ACCESS_FINE_LOCATION)
+                    }
+        }
+
+        whenever(context.getSystemService(eq(Context.LOCATION_SERVICE))).thenReturn(locationManager)
+        whenever(context.applicationContext).thenReturn(mockedAplicationContext)
+        whenever(context.applicationContext.packageManager).thenReturn(mockedPackageManager)
     }
 
     @Test
     fun test_PermissionTransformerSuccess() {
         val callback: BasePermissionTransformer.PermissionCallback = mock()
-        val applicationContext: Context = mock()
         val location: Location = mock()
 
-        whenever(applicationContext.checkSelfPermission(any()))
+        whenever(context.applicationContext.checkSelfPermission(any()))
                 .thenReturn(PackageManager.PERMISSION_DENIED)
-        whenever(context.applicationContext)
-                .thenReturn(applicationContext)
         whenever(locationManager.getLastKnownLocation(eq(networkProvider)))
                 .thenReturn(location)
 
@@ -59,7 +73,7 @@ class RxLocationManagerTestM {
         Thread.sleep(100L)
 
         argumentCaptor<String>().apply {
-            verify(applicationContext, times(2)).checkSelfPermission(capture())
+            verify(context.applicationContext, times(2)).checkSelfPermission(capture())
             val permissions = allValues
             assertEquals(2, allValues.size)
             assert(permissions.contains(Manifest.permission.ACCESS_COARSE_LOCATION))
@@ -79,12 +93,9 @@ class RxLocationManagerTestM {
     @Test
     fun test_PermissionTransformerDenied() {
         val callback: BasePermissionTransformer.PermissionCallback = mock()
-        val applicationContext: Context = mock()
 
-        whenever(applicationContext.checkSelfPermission(any()))
+        whenever(context.applicationContext.checkSelfPermission(any()))
                 .thenReturn(PackageManager.PERMISSION_DENIED)
-        whenever(context.applicationContext)
-                .thenReturn(applicationContext)
 
         val susbcriber = defaultRxLocationManager.getLastLocation(networkProvider,
                 transformers = PermissionTransformer(context, defaultRxLocationManager, callback))
@@ -93,7 +104,7 @@ class RxLocationManagerTestM {
         Thread.sleep(100L)
 
         argumentCaptor<String>().apply {
-            verify(applicationContext, times(2)).checkSelfPermission(capture())
+            verify(context.applicationContext, times(2)).checkSelfPermission(capture())
             val permissions = allValues
             assertEquals(2, allValues.size)
             assert(permissions.contains(Manifest.permission.ACCESS_COARSE_LOCATION))
@@ -112,17 +123,13 @@ class RxLocationManagerTestM {
     fun test_PermissionTransformerBuilder() {
         val callback: BasePermissionTransformer.PermissionCallback = mock()
         val locationBuilder = LocationRequestBuilder(defaultRxLocationManager)
-        val applicationContext: Context = mock()
         val location: Location = mock()
 
-        whenever(applicationContext.checkSelfPermission(any()))
+        whenever(context.applicationContext.checkSelfPermission(any()))
                 .thenReturn(PackageManager.PERMISSION_DENIED)
                 .thenReturn(PackageManager.PERMISSION_DENIED)
                 .thenReturn(PackageManager.PERMISSION_GRANTED)
                 .thenReturn(PackageManager.PERMISSION_GRANTED)
-
-        whenever(context.applicationContext)
-                .thenReturn(applicationContext)
 
         whenever(locationManager.isProviderEnabled(eq(networkProvider)))
                 .thenReturn(true)
@@ -144,7 +151,7 @@ class RxLocationManagerTestM {
         Thread.sleep(100L)
 
         argumentCaptor<String>().apply {
-            verify(applicationContext, times(2)).checkSelfPermission(capture())
+            verify(context.applicationContext, times(2)).checkSelfPermission(capture())
             val permissions = allValues
             assertEquals(2, allValues.size)
             assert(permissions.contains(Manifest.permission.ACCESS_COARSE_LOCATION))
