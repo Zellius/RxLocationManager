@@ -5,8 +5,13 @@ import android.location.Location
 /**
  * Abstract class used just to implement rxJava1 and rxJava2
  */
-abstract class BaseLocationRequestBuilder<SINGLE, MAYBE, SINGLE_TRANSFORMER, MAYBE_TRANSFORMER, out BUILDER : BaseLocationRequestBuilder<SINGLE, MAYBE, SINGLE_TRANSFORMER, MAYBE_TRANSFORMER, BUILDER>>
-(protected val rxLocationManager: BaseRxLocationManager<SINGLE, MAYBE, SINGLE_TRANSFORMER, MAYBE_TRANSFORMER>) {
+abstract class BaseLocationRequestBuilder<SINGLE,
+        MAYBE,
+        OBSERVABLE,
+        SINGLE_TRANSFORMER,
+        MAYBE_TRANSFORMER,
+        out BUILDER : BaseLocationRequestBuilder<SINGLE, MAYBE, OBSERVABLE, SINGLE_TRANSFORMER, MAYBE_TRANSFORMER, BUILDER>>
+(protected val rxLocationManager: BaseRxLocationManager<SINGLE, MAYBE, OBSERVABLE, SINGLE_TRANSFORMER, MAYBE_TRANSFORMER>) {
     protected var defaultLocation: Location? = null
         private set
 

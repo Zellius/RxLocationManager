@@ -14,7 +14,12 @@ import java.util.concurrent.TimeoutException
  * Implementation of [BaseRxLocationManager] based on RxJava2
  */
 class RxLocationManager internal constructor(context: Context,
-                                             private val scheduler: Scheduler) : BaseRxLocationManager<Single<Location>, Maybe<Location>, SingleTransformer<Location, Location>, MaybeTransformer<Location, Location>>(context) {
+                                             private val scheduler: Scheduler
+) : BaseRxLocationManager<Single<Location>,
+        Maybe<Location>,
+        Observable<Location>,
+        SingleTransformer<Location, Location>,
+        MaybeTransformer<Location, Location>>(context) {
     constructor(context: Context) : this(context, AndroidSchedulers.mainThread())
 
     private val permissionSubject by lazy { PublishSubject.create<Pair<Array<out String>, IntArray>>() }
@@ -86,7 +91,7 @@ class RxLocationManager internal constructor(context: Context,
     override fun baseRequestLocationUpdates(provider: String, minTime: Long, minDistance: Float): Observable<Location> {
         Observable.create(ObservableOnSubscribe<Location> {
             val locationListener = object : LocationListener {
-                override fun onLocationChanged(location: Location?) {
+                override fun onLocationChanged(location: Location) {
                     it.onNext(location)
                 }
 
@@ -115,7 +120,12 @@ class RxLocationManager internal constructor(context: Context,
  * @param rxLocationManager manager used in the builder. Used for request runtime permissions.
  */
 class LocationRequestBuilder(rxLocationManager: RxLocationManager
-) : BaseLocationRequestBuilder<Single<Location>, Maybe<Location>, SingleTransformer<Location, Location>, MaybeTransformer<Location, Location>, LocationRequestBuilder>(rxLocationManager) {
+) : BaseLocationRequestBuilder<Single<Location>,
+        Maybe<Location>,
+        Observable<Location>,
+        SingleTransformer<Location, Location>,
+        MaybeTransformer<Location, Location>,
+        LocationRequestBuilder>(rxLocationManager) {
     /**
      * Use this constructor if you do not need request runtime permissions
      */

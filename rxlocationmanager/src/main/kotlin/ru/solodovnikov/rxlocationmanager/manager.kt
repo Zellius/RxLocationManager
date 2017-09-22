@@ -21,6 +21,7 @@ class RxLocationManager internal constructor(context: Context,
                                              private val scheduler: Scheduler
 ) : BaseRxLocationManager<Single<Location>,
         Single<Location>,
+        Observable<Location>,
         Single.Transformer<Location, Location>,
         Single.Transformer<Location, Location>>(context) {
 
@@ -115,6 +116,7 @@ class RxLocationManager internal constructor(context: Context,
 class LocationRequestBuilder(rxLocationManager: RxLocationManager
 ) : BaseLocationRequestBuilder<Single<Location>,
         Single<Location>,
+        Observable<Location>,
         Single.Transformer<Location, Location>,
         Single.Transformer<Location, Location>,
         LocationRequestBuilder>(rxLocationManager) {
