@@ -5,29 +5,28 @@ import android.location.LocationManager
 import android.os.Bundle
 import android.support.design.widget.CoordinatorLayout
 import android.support.design.widget.Snackbar
+import android.support.v4.app.ActivityCompat
 import android.support.v7.app.AppCompatActivity
-import android.support.v7.widget.Toolbar
 import android.view.Menu
 import android.view.MenuItem
 import io.reactivex.Maybe
 import io.reactivex.Single
-import ru.solodovnikov.rx2locationmanager.IgnoreErrorTransformer
-import ru.solodovnikov.rx2locationmanager.LocationRequestBuilder
-import ru.solodovnikov.rx2locationmanager.LocationTime
-import ru.solodovnikov.rx2locationmanager.RxLocationManager
+import ru.solodovnikov.rx2locationmanager.*
 import java.util.concurrent.TimeUnit
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), BasePermissionTransformer.PermissionCallback {
     private val rxLocationManager: RxLocationManager by lazy { RxLocationManager(this) }
-    private val locationRequestBuilder: LocationRequestBuilder by lazy { LocationRequestBuilder(this) }
+    private val locationRequestBuilder: LocationRequestBuilder by lazy { LocationRequestBuilder(rxLocationManager) }
 
-    private val coordinatorLayout: CoordinatorLayout by lazy { findViewById(R.id.root) as CoordinatorLayout }
+    private val coordinatorLayout by lazy { findViewById<CoordinatorLayout>(R.id.root) }
+
+    private var checkPermissions = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        setSupportActionBar(findViewById(R.id.toolbar) as Toolbar)
+        setSupportActionBar(findViewById(R.id.toolbar))
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -37,6 +36,11 @@ class MainActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
+            R.id.check_permissions -> {
+                item.isChecked = !item.isChecked
+                checkPermissions = item.isChecked
+                return true
+            }
             R.id.last_network -> {
                 requestLastNetworkLocation()
                 return true
@@ -63,32 +67,60 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_CODE_LOCATION_PERMISSIONS) {
+            rxLocationManager.onRequestPermissionsResult(permissions, grantResults)
+        }
+    }
+
+    override fun requestPermissions(permissions: Array<String>) {
+        ActivityCompat.requestPermissions(this, permissions, REQUEST_CODE_LOCATION_PERMISSIONS)
+    }
+
     private fun requestLastNetworkLocation() {
-        rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER)
-                .testSubscribe("requestLastNetworkLocation")
+        if (checkPermissions) {
+            rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, transformers = PermissionTransformer(this, rxLocationManager, this))
+        } else {
+            rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER)
+        }.testSubscribe("requestLastNetworkLocation")
     }
 
     private fun requestLastNetworkOneMinuteOldLocation() {
-        rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(1, TimeUnit.MINUTES))
-                .testSubscribe("requestLastNetworkOneMinuteOldLocation")
+        if (checkPermissions) {
+            rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(1, TimeUnit.MINUTES), PermissionTransformer(this, rxLocationManager, this))
+        } else {
+            rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(1, TimeUnit.MINUTES))
+        }.testSubscribe("requestLastNetworkOneMinuteOldLocation")
     }
 
     private fun requestLocation() {
-        rxLocationManager.requestLocation(LocationManager.NETWORK_PROVIDER, LocationTime(15, TimeUnit.SECONDS))
-                .testSubscribe("requestLocation")
+        if (checkPermissions) {
+            rxLocationManager.requestLocation(LocationManager.NETWORK_PROVIDER, LocationTime(15, TimeUnit.SECONDS), PermissionTransformer(this, rxLocationManager, this))
+        } else {
+            rxLocationManager.requestLocation(LocationManager.NETWORK_PROVIDER, LocationTime(15, TimeUnit.SECONDS))
+        }.testSubscribe("requestLocation")
     }
 
     private fun requestBuild() {
-        locationRequestBuilder
-                .addLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(30, TimeUnit.MINUTES))
-                .addRequestLocation(LocationManager.NETWORK_PROVIDER, LocationTime(15, TimeUnit.SECONDS))
-                .setDefaultLocation(Location(LocationManager.PASSIVE_PROVIDER))
-                .create()
-                .testSubscribe("requestBuild")
+        if (checkPermissions) {
+            val permissionTransformer = PermissionTransformer(this, rxLocationManager, this)
+            locationRequestBuilder
+                    .addLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(30, TimeUnit.MINUTES), permissionTransformer)
+                    .addRequestLocation(LocationManager.NETWORK_PROVIDER, LocationTime(15, TimeUnit.SECONDS), permissionTransformer)
+                    .setDefaultLocation(Location(LocationManager.PASSIVE_PROVIDER))
+                    .create()
+        } else {
+            locationRequestBuilder
+                    .addLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(30, TimeUnit.MINUTES))
+                    .addRequestLocation(LocationManager.NETWORK_PROVIDER, LocationTime(15, TimeUnit.SECONDS))
+                    .setDefaultLocation(Location(LocationManager.PASSIVE_PROVIDER))
+                    .create()
+        }.testSubscribe("requestBuild")
     }
 
     private fun requestBuildIgnoreSecurityError() {
-        val ignoreError = IgnoreErrorTransformer(listOf(SecurityException::class.java))
+        val ignoreError = IgnoreErrorTransformer(SecurityException::class.java)
 
         locationRequestBuilder
                 .addLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(30, TimeUnit.MINUTES), ignoreError)
@@ -120,5 +152,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun showErrorMessage(throwable: Throwable, methodName: String) {
         showSnackbar("$methodName Error: ${throwable.message}")
+    }
+
+    companion object {
+        private const val REQUEST_CODE_LOCATION_PERMISSIONS = 150
     }
 }

@@ -1,23 +1,19 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 buildscript {
-    ext.kotlin_version = '1.1.2-3'
+    ext.kotlin_version = '1.1.4-3'
 
     repositories {
         jcenter()
         mavenCentral()
-        maven {
-            url = 'https://dl.bintray.com/kotlin/kotlin-dev/'
-        }
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:2.3.2'
+        classpath 'com.android.tools.build:gradle:2.3.3'
         classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7.3'
         classpath 'org.kt3k.gradle.plugin:coveralls-gradle-plugin:2.8.1'
         classpath 'com.github.dcendents:android-maven-gradle-plugin:1.5'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        //TODO https://github.com/Kotlin/dokka/issues/140
-        classpath 'org.jetbrains.dokka:dokka-android-gradle-plugin:0.9.14-eap-3'
+        classpath 'org.jetbrains.dokka:dokka-android-gradle-plugin:0.9.15'
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
@@ -27,6 +23,9 @@ buildscript {
 allprojects {
     repositories {
         jcenter()
+        maven {
+            url 'https://maven.google.com'
+        }
     }
 }
 
@@ -70,7 +69,7 @@ project(':rxlocationmanager-rxjava2') {
     lib_description = 'Android library that helps to get location using standart LocationManager and RxJava2'
 
     dependencies {
-        compile 'io.reactivex.rxjava2:rxjava:2.1.0'
+        compile 'io.reactivex.rxjava2:rxjava:2.1.3'
         compile 'io.reactivex.rxjava2:rxandroid:2.0.1'
     }
 
@@ -111,13 +110,13 @@ def prepareSample(Project p) {
     }
 
     p.android {
-        compileSdkVersion 25
-        buildToolsVersion "25.0.3"
+        compileSdkVersion 26
+        buildToolsVersion "26.0.1"
 
         defaultConfig {
             applicationId "ru.solodovnikov.rxlocationmanager.sample"
             minSdkVersion 14
-            targetSdkVersion 25
+            targetSdkVersion 26
             versionCode 1
             versionName "1.0"
         }
@@ -136,8 +135,8 @@ def prepareSample(Project p) {
 
     p.dependencies {
         compile fileTree(include: ['*.jar'], dir: 'libs')
-        compile 'com.android.support:appcompat-v7:25.3.1'
-        compile 'com.android.support:design:25.3.1'
+        compile 'com.android.support:appcompat-v7:26.0.2'
+        compile 'com.android.support:design:26.0.2'
 
         if (isKotlinSample) {
             compile "org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version"

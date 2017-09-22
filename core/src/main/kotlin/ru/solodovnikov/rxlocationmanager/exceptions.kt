@@ -16,3 +16,8 @@ class ElderLocationException(val location: Location) : Throwable("The location i
  * Throws when Android [provider] has no last location
  */
 class ProviderHasNoLastLocationException(val provider: String) : Throwable("The $provider has no last location")
+
+/**
+ * Used by library to indicate which Throwable should be ignored
+ */
+internal class IgnorableException: Throwable()
