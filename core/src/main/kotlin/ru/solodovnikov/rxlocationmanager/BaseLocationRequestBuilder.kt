@@ -5,18 +5,19 @@ import android.location.Location
 /**
  * Abstract class used just to implement rxJava1 and rxJava2
  */
-abstract class BaseLocationRequestBuilder<out SINGLE, out MAYBE, in TRANSFORMER, out BUILDER : BaseLocationRequestBuilder<SINGLE, MAYBE, TRANSFORMER, BUILDER>> internal constructor(protected val rxLocationManager: BaseRxLocationManager<SINGLE, MAYBE>) {
+abstract class BaseLocationRequestBuilder<SINGLE, MAYBE, SINGLE_TRANSFORMER, MAYBE_TRANSFORMER, out BUILDER : BaseLocationRequestBuilder<SINGLE, MAYBE, SINGLE_TRANSFORMER, MAYBE_TRANSFORMER, BUILDER>>
+(protected val rxLocationManager: BaseRxLocationManager<SINGLE, MAYBE, SINGLE_TRANSFORMER, MAYBE_TRANSFORMER>) {
     protected var defaultLocation: Location? = null
         private set
 
     /**
      * Try to get current location by specific [provider].
      * It will ignore any library exceptions (e.g [ProviderDisabledException]).
-     * But will fall if any other exception will occur. This can be changed via [transformer].
+     * But will fall if any other exception will occur. This can be changed via [transformers].
      *
      * @param provider    provider name
      * @param timeOut     request timeout
-     * @param transformer extra transformer
+     * @param transformers extra transformers
      *
      * @return same builder
      * @see baseAddRequestLocation
@@ -24,17 +25,17 @@ abstract class BaseLocationRequestBuilder<out SINGLE, out MAYBE, in TRANSFORMER,
     @JvmOverloads
     fun addRequestLocation(provider: String,
                            timeOut: LocationTime? = null,
-                           transformer: TRANSFORMER? = null): BUILDER =
-            baseAddRequestLocation(provider, timeOut, transformer)
+                           vararg transformers: SINGLE_TRANSFORMER): BUILDER =
+            baseAddRequestLocation(provider, timeOut, transformers)
 
     /**
      * Get last location from specific [provider].
      * It will ignore any library exceptions (e.g [ElderLocationException]).
-     * But will fall if any other exception will occur. This can be changed via [transformer].
+     * But will fall if any other exception will occur. This can be changed via [transformers].
      *
      * @param provider    provider name
      * @param howOldCanBe how old a location can be
-     * @param transformer extra transformer
+     * @param transformers extra transformers
      *
      * @return same builder
      * @see baseAddLastLocation
@@ -42,8 +43,8 @@ abstract class BaseLocationRequestBuilder<out SINGLE, out MAYBE, in TRANSFORMER,
     @JvmOverloads
     fun addLastLocation(provider: String,
                         howOldCanBe: LocationTime? = null,
-                        transformer: TRANSFORMER? = null): BUILDER =
-            baseAddLastLocation(provider, howOldCanBe, transformer)
+                        vararg transformers: MAYBE_TRANSFORMER): BUILDER =
+            baseAddLastLocation(provider, howOldCanBe, transformers)
 
 
     /**
@@ -59,10 +60,10 @@ abstract class BaseLocationRequestBuilder<out SINGLE, out MAYBE, in TRANSFORMER,
             }
 
     protected abstract fun baseAddRequestLocation(provider: String, timeOut: LocationTime? = null,
-                                                  transformer: TRANSFORMER? = null): BUILDER
+                                                  transformers: Array<out SINGLE_TRANSFORMER>): BUILDER
 
     protected abstract fun baseAddLastLocation(provider: String, howOldCanBe: LocationTime? = null,
-                                               transformer: TRANSFORMER? = null): BUILDER
+                                               transformers: Array<out MAYBE_TRANSFORMER>): BUILDER
 
     /**
      * Construct final observable.

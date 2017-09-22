@@ -2,6 +2,12 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
+        android:id="@+id/check_permissions"
+        android:checkable="true"
+        android:checked="false"
+        android:title="@string/check_permissions"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/last_network"
         android:title="@string/last_network"
         app:showAsAction="never" />

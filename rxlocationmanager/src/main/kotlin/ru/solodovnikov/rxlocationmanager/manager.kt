@@ -11,21 +11,30 @@ import rx.Scheduler
 import rx.Single
 import rx.android.schedulers.AndroidSchedulers
 import rx.functions.Action1
-import java.util.*
+import rx.subjects.PublishSubject
 import java.util.concurrent.TimeoutException
 
 /**
  * Implementation of [BaseRxLocationManager] based on RxJava1
  */
 class RxLocationManager internal constructor(context: Context,
-                                             private val scheduler: Scheduler) : BaseRxLocationManager<Single<Location>, Single<Location>>(context) {
+                                             private val scheduler: Scheduler
+) : BaseRxLocationManager<Single<Location>,
+        Single<Location>,
+        Single.Transformer<Location, Location>,
+        Single.Transformer<Location, Location>>(context) {
+
     constructor(context: Context) : this(context, AndroidSchedulers.mainThread())
+
+    private val permissionSubject by lazy { PublishSubject.create<Pair<Array<out String>, IntArray>>() }
 
     /**
      * @return Result [Single] will emit null if there is no location by this [provider].
      * Or it will be emit [ElderLocationException] if [howOldCanBe] not null and location is too old.
      */
-    override fun baseGetLastLocation(provider: String, howOldCanBe: LocationTime?): Single<Location> =
+    override fun baseGetLastLocation(provider: String,
+                                     howOldCanBe: LocationTime?,
+                                     transformers: Array<out Single.Transformer<Location, Location>>): Single<Location> =
             Single.fromCallable { locationManager.getLastKnownLocation(provider) }
                     .compose {
                         if (howOldCanBe != null) {
@@ -37,16 +46,27 @@ class RxLocationManager internal constructor(context: Context,
                         } else {
                             it
                         }
-                    }.compose { applySchedulers(it) }
+                    }.let { transformers.fold(it, { acc, transformer -> acc.compose(transformer) }) ?: it }
+                    .compose { applySchedulers(it) }
 
     /**
      * @return Result [Single] can throw [ProviderDisabledException] or [TimeoutException] if [timeOut] not null
      */
-    override fun baseRequestLocation(provider: String, timeOut: LocationTime?): Single<Location> =
+    override fun baseRequestLocation(provider: String,
+                                     timeOut: LocationTime?,
+                                     transformers: Array<out Single.Transformer<Location, Location>>): Single<Location> =
             Observable.create(RxLocationListener(locationManager, provider), Emitter.BackpressureMode.NONE)
                     .toSingle()
                     .compose { if (timeOut != null) it.timeout(timeOut.time, timeOut.timeUnit) else it }
+                    .let { transformers.fold(it, { acc, transformer -> acc.compose(transformer) }) ?: it }
                     .compose { applySchedulers(it) }
+
+    override fun onRequestPermissionsResult(permissions: Array<out String>, grantResults: IntArray) {
+        permissionSubject.onNext(Pair(permissions, grantResults))
+    }
+
+    internal fun subscribeToPermissionUpdate(onUpdate: (Pair<Array<out String>, IntArray>) -> Unit)
+            = permissionSubject.subscribe(onUpdate, {}, {})
 
     private fun applySchedulers(s: Single<Location>) = s.subscribeOn(scheduler)
 
@@ -86,22 +106,30 @@ class RxLocationManager internal constructor(context: Context,
 
 /**
  * Implementation of [BaseLocationRequestBuilder] based on rxJava1
+ * @param rxLocationManager manager used in the builder. Used for request runtime permissions.
  */
-class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationManager) : BaseLocationRequestBuilder<Single<Location>, Single<Location>, Single.Transformer<Location, Location>, LocationRequestBuilder>(rxLocationManager) {
+class LocationRequestBuilder(rxLocationManager: RxLocationManager
+) : BaseLocationRequestBuilder<Single<Location>,
+        Single<Location>,
+        Single.Transformer<Location, Location>,
+        Single.Transformer<Location, Location>,
+        LocationRequestBuilder>(rxLocationManager) {
+    /**
+     * Use this constructor if you do not need request runtime permissions
+     */
     constructor(context: Context) : this(RxLocationManager(context))
 
     private var resultObservable = Observable.empty<Location>()
 
     override fun baseAddRequestLocation(provider: String,
                                         timeOut: LocationTime?,
-                                        transformer: Single.Transformer<Location, Location>?): LocationRequestBuilder =
-            addRequestLocation(provider, timeOut, false, transformer)
-
+                                        transformers: Array<out Single.Transformer<Location, Location>>): LocationRequestBuilder =
+            addRequestLocation(provider, timeOut, false, transformers)
 
     override fun baseAddLastLocation(provider: String,
                                      howOldCanBe: LocationTime?,
-                                     transformer: Single.Transformer<Location, Location>?) =
-            addLastLocation(provider, howOldCanBe, false, transformer)
+                                     transformers: Array<out Single.Transformer<Location, Location>>): LocationRequestBuilder =
+            addLastLocation(provider, howOldCanBe, false, transformers)
 
     /**
      * Construct final observable.
@@ -120,7 +148,7 @@ class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationM
      * @param provider    provider name
      * @param timeOut     request timeout
      * @param isNullValid if true, then this request can emit null value
-     * @param transformer extra transformer
+     * @param transformers extra transformer
      *
      * @return same builder
      * @see baseAddRequestLocation
@@ -129,13 +157,12 @@ class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationM
     fun addRequestLocation(provider: String,
                            timeOut: LocationTime? = null,
                            isNullValid: Boolean = false,
-                           transformer: Single.Transformer<Location, Location>? = null): LocationRequestBuilder =
-            rxLocationManager.requestLocation(provider, timeOut)
-                    .compose { if (transformer != null) it.compose(transformer) else it }
+                           transformers: Array<out Single.Transformer<Location, Location>> = emptyArray()): LocationRequestBuilder =
+            rxLocationManager.requestLocation(provider, timeOut, *transformers)
                     .toObservable()
                     .onErrorResumeNext {
                         when (it) {
-                            is TimeoutException, is ProviderDisabledException, is NoSuchElementException -> Observable.empty<Location>()
+                            is TimeoutException, is ProviderDisabledException, is IgnorableException -> Observable.empty<Location>()
                             else -> Observable.error<Location>(it)
                         }
                     }
@@ -153,7 +180,7 @@ class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationM
      * @param provider    provider name
      * @param howOldCanBe optional. How old a location can be
      * @param isNullValid if true, then this request can emit null value
-     * @param transformer optional extra transformer
+     * @param transformers optional extra transformer
      *
      * @return same builder
      * @see baseAddLastLocation
@@ -162,13 +189,12 @@ class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationM
     fun addLastLocation(provider: String,
                         howOldCanBe: LocationTime? = null,
                         isNullValid: Boolean = false,
-                        transformer: Single.Transformer<Location, Location>? = null): LocationRequestBuilder =
-            rxLocationManager.getLastLocation(provider, howOldCanBe)
-                    .compose { if (transformer != null) it.compose(transformer) else it }
+                        transformers: Array<out Single.Transformer<Location, Location>> = emptyArray()): LocationRequestBuilder =
+            rxLocationManager.getLastLocation(provider, howOldCanBe, *transformers)
                     .toObservable()
                     .onErrorResumeNext {
                         when (it) {
-                            is ElderLocationException, is NoSuchElementException -> Observable.empty<Location>()
+                            is ElderLocationException, is IgnorableException -> Observable.empty<Location>()
                             else -> Observable.error<Location>(it)
                         }
                     }
@@ -177,25 +203,4 @@ class LocationRequestBuilder internal constructor(rxLocationManager: RxLocationM
                         resultObservable = resultObservable.concatWith(it)
                         this
                     }
-}
-
-/**
- * Use it to ignore any described error type.
- *
- * @param errorsToIgnore if null or empty, then ignore all errors, otherwise just described types.
- */
-open class IgnoreErrorTransformer @JvmOverloads constructor(private val errorsToIgnore: List<Class<out Throwable>>? = null) : Single.Transformer<Location, Location> {
-    override fun call(upstream: Single<Location>): Single<Location> {
-        return upstream.onErrorResumeNext { t: Throwable ->
-            if (errorsToIgnore == null || errorsToIgnore.isEmpty()) {
-                Observable.empty<Location>().toSingle()
-            } else {
-                if (errorsToIgnore.contains(t.javaClass)) {
-                    Observable.empty<Location>().toSingle()
-                } else {
-                    Single.error(t)
-                }
-            }
-        }
-    }
 }

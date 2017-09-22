@@ -10,7 +10,7 @@ import java.util.concurrent.TimeoutException
 /**
  * Abstract class used just to implement rxJava1 and rxJava2
  */
-abstract class BaseRxLocationManager<out SINGLE, out MAYBE>(context: Context) {
+abstract class BaseRxLocationManager<out SINGLE, out MAYBE, in SINGLE_TRANSFORMER, in MAYBE_TRANSFORMER>(context: Context) {
     protected val locationManager: LocationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
     /**
@@ -19,13 +19,16 @@ abstract class BaseRxLocationManager<out SINGLE, out MAYBE>(context: Context) {
      *
      * @param provider provider name
      * @param howOldCanBe how old a location can be
+     * @param transformers extra transformers
      * @return observable that emit last known location
      * @see ElderLocationException
      * @see ProviderHasNoLastLocationException
      */
     @JvmOverloads
-    fun getLastLocation(provider: String, howOldCanBe: LocationTime? = null): MAYBE =
-            baseGetLastLocation(provider, howOldCanBe)
+    fun getLastLocation(provider: String,
+                        howOldCanBe: LocationTime? = null,
+                        vararg transformers: MAYBE_TRANSFORMER): MAYBE =
+            baseGetLastLocation(provider, howOldCanBe, transformers)
 
     /**
      * Try to get current location by specific provider.
@@ -34,17 +37,26 @@ abstract class BaseRxLocationManager<out SINGLE, out MAYBE>(context: Context) {
      *
      * @param provider provider name
      * @param timeOut  request timeout
+     * @param transformers extra transformers
      * @return observable that emit current location
      * @see TimeoutException
      * @see ProviderDisabledException
      */
     @JvmOverloads
-    fun requestLocation(provider: String, timeOut: LocationTime? = null): SINGLE
-            = baseRequestLocation(provider, timeOut)
+    fun requestLocation(provider: String,
+                        timeOut: LocationTime? = null,
+                        vararg transformers: SINGLE_TRANSFORMER): SINGLE
+            = baseRequestLocation(provider, timeOut, transformers)
 
-    protected abstract fun baseGetLastLocation(provider: String, howOldCanBe: LocationTime?): MAYBE
+    /**
+     * You need to call this method only if you use any [BasePermissionTransformer] implementations
+     * @see android.app.Activity.onRequestPermissionsResult
+     */
+    abstract fun onRequestPermissionsResult(permissions: Array<out String>, grantResults: IntArray)
 
-    protected abstract fun baseRequestLocation(provider: String, timeOut: LocationTime?): SINGLE
+    protected abstract fun baseGetLastLocation(provider: String, howOldCanBe: LocationTime?, transformers: Array<out MAYBE_TRANSFORMER>): MAYBE
+
+    protected abstract fun baseRequestLocation(provider: String, timeOut: LocationTime?, transformers: Array<out SINGLE_TRANSFORMER>): SINGLE
 
     /**
      * Check is location not old
