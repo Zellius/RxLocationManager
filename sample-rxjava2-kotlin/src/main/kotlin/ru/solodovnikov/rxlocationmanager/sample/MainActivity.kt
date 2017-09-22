@@ -7,7 +7,6 @@ import android.support.design.widget.CoordinatorLayout
 import android.support.design.widget.Snackbar
 import android.support.v4.app.ActivityCompat
 import android.support.v7.app.AppCompatActivity
-import android.support.v7.widget.Toolbar
 import android.view.Menu
 import android.view.MenuItem
 import io.reactivex.Maybe
@@ -19,7 +18,7 @@ class MainActivity : AppCompatActivity(), BasePermissionTransformer.PermissionCa
     private val rxLocationManager: RxLocationManager by lazy { RxLocationManager(this) }
     private val locationRequestBuilder: LocationRequestBuilder by lazy { LocationRequestBuilder(rxLocationManager) }
 
-    private val coordinatorLayout: CoordinatorLayout by lazy { findViewById(R.id.root) as CoordinatorLayout }
+    private val coordinatorLayout by lazy { findViewById<CoordinatorLayout>(R.id.root) }
 
     private var checkPermissions = false
 
@@ -27,7 +26,7 @@ class MainActivity : AppCompatActivity(), BasePermissionTransformer.PermissionCa
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        setSupportActionBar(findViewById(R.id.toolbar) as Toolbar)
+        setSupportActionBar(findViewById(R.id.toolbar))
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {

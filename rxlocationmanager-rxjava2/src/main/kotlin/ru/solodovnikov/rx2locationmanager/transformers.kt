@@ -36,7 +36,6 @@ open class PermissionTransformer(context: Context,
                     val deniedPermissions = getDeniedPermissions()
 
                     if (deniedPermissions.isNotEmpty()) {
-                        callback.requestPermissions(deniedPermissions)
                         //wait until user approve permissions or dispose action
                         subscribeToPermissionUpdate {
                             val resultPermissions = it.first
@@ -48,6 +47,8 @@ open class PermissionTransformer(context: Context,
                                 emitter.onComplete()
                             }
                         }.apply { emitter.setCancellable { dispose() } }
+
+                        callback.requestPermissions(deniedPermissions)
                     } else {
                         emitter.onComplete()
                     }

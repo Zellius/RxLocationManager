@@ -19,10 +19,15 @@ abstract class BasePermissionTransformer(context: Context,
      */
     protected fun getDeniedPermissions() =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val manifestPermissions = context.packageManager
+                        .getPackageInfo(context.packageName, PackageManager.GET_PERMISSIONS)
+                        .requestedPermissions
+
                 arrayOf(Manifest.permission.ACCESS_FINE_LOCATION,
                         Manifest.permission.ACCESS_COARSE_LOCATION)
                         .filter {
-                            context.checkSelfPermission(it) == PackageManager.PERMISSION_DENIED
+                            manifestPermissions.contains(it) &&
+                                    context.checkSelfPermission(it) == PackageManager.PERMISSION_DENIED
                         }.toTypedArray()
             } else {
                 emptyArray()

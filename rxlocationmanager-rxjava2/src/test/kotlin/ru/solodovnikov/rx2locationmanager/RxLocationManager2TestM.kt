@@ -56,7 +56,7 @@ class RxLocationManager2TestM {
                 transformers = PermissionTransformer(context, defaultRxLocationManager, callback))
                 .test()
 
-        Thread.sleep(500L)
+        Thread.sleep(100L)
 
         argumentCaptor<String>().apply {
             verify(applicationContext, times(2)).checkSelfPermission(capture())
@@ -90,7 +90,7 @@ class RxLocationManager2TestM {
                 transformers = PermissionTransformer(context, defaultRxLocationManager, callback))
                 .test()
 
-        Thread.sleep(500L)
+        Thread.sleep(100L)
 
         argumentCaptor<String>().apply {
             verify(applicationContext, times(2)).checkSelfPermission(capture())
@@ -141,7 +141,7 @@ class RxLocationManager2TestM {
                 .create()
                 .test()
 
-        Thread.sleep(500L)
+        Thread.sleep(100L)
 
         argumentCaptor<String>().apply {
             verify(applicationContext, times(2)).checkSelfPermission(capture())
