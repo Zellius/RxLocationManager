@@ -2,12 +2,26 @@ package ru.solodovnikov.rxlocationmanager
 
 import android.content.Context
 import android.content.pm.PackageManager
-import android.location.Location
 import android.os.Build
 import rx.Completable
+import rx.Observable
 import rx.Single
 import rx.Subscription
 import java.util.*
+
+interface TransformerSingle<T, R> {
+    fun transform(upstream: Single<T>): Single<R>
+}
+
+interface TransformerObservable<T, R> {
+    fun transform(upstream: Observable<T>): Observable<R>
+}
+
+interface TransformerCompletable {
+    fun transform(upstream: Completable): Completable
+}
+
+interface Transformer<T, R> : TransformerSingle<T, R>, TransformerObservable<T, R>, TransformerCompletable
 
 /**
  * Transformer used to request runtime permissions
@@ -15,14 +29,20 @@ import java.util.*
  * Call [RxLocationManager.onRequestPermissionsResult] inside your [android.app.Activity.onRequestPermissionsResult]
  * to get request permissions results in the transformer.
  */
-open class PermissionTransformer(context: Context,
-                                 private val rxLocationManager: RxLocationManager,
-                                 callback: BasePermissionTransformer.PermissionCallback
-) : BasePermissionTransformer(context, callback),
-        Single.Transformer<Location, Location> {
+open class PermissionTransformer<T>(context: Context,
+                                    private val rxLocationManager: RxLocationManager,
+                                    callback: BasePermissionTransformer.PermissionCallback
+) : BasePermissionTransformer(context, callback), Transformer<T, T> {
 
-    override fun call(t: Single<Location>): Single<Location> =
-            checkPermissions().andThen(t)
+
+    override fun transform(upstream: Single<T>): Single<T> =
+            checkPermissions().andThen(upstream)
+
+    override fun transform(upstream: Observable<T>): Observable<T> =
+            checkPermissions().andThen(upstream)
+
+    override fun transform(upstream: Completable): Completable =
+            checkPermissions().andThen(upstream)
 
     /**
      * Construct [Completable] which check runtime permissions
@@ -67,16 +87,34 @@ open class PermissionTransformer(context: Context,
  *
  * @param errorsToIgnore if empty, then ignore all errors, otherwise just described types.
  */
-class IgnoreErrorTransformer(vararg errorsToIgnore: Class<out Throwable>
-) : Single.Transformer<Location, Location> {
+class IgnoreErrorTransformer<T>(vararg errorsToIgnore: Class<out Throwable>
+) : Transformer<T, T> {
     private val toIgnore: Array<out Class<out Throwable>> = errorsToIgnore
 
-    override fun call(t: Single<Location>): Single<Location> =
-            t.onErrorResumeNext {
+    override fun transform(upstream: Single<T>): Single<T> =
+            upstream.onErrorResumeNext {
                 if (toIgnore.isEmpty() || toIgnore.contains(it.javaClass)) {
                     IgnorableException()
                 } else {
                     it
-                }.let { Single.error<Location>(it) }
+                }.let { Single.error<T>(it) }
+            }
+
+    override fun transform(upstream: Observable<T>): Observable<T> =
+            upstream.onErrorResumeNext {
+                if (toIgnore.isEmpty() || toIgnore.contains(it.javaClass)) {
+                    Observable.empty<T>()
+                } else {
+                    Observable.error<T>(it)
+                }
+            }
+
+    override fun transform(upstream: Completable): Completable =
+            upstream.onErrorResumeNext {
+                if (toIgnore.isEmpty() || toIgnore.contains(it.javaClass)) {
+                    Completable.complete()
+                } else {
+                    Completable.error(it)
+                }
             }
 }

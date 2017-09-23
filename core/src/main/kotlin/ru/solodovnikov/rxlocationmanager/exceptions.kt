@@ -13,9 +13,9 @@ class ProviderDisabledException(val provider: String) : Throwable("The $provider
 class ElderLocationException(val location: Location) : Throwable("The location is too old")
 
 /**
- * Throws when Android [provider] has no last location
+ * Throws when null emitted
  */
-class ProviderHasNoLastLocationException(val provider: String) : Throwable("The $provider has no last location")
+internal class NullEmittedException() : Throwable()
 
 /**
  * Used by library to indicate which Throwable should be ignored

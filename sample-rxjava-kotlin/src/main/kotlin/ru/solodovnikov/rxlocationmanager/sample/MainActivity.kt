@@ -105,8 +105,8 @@ class MainActivity : AppCompatActivity(), BasePermissionTransformer.PermissionCa
         if (checkPermissions) {
             val permissionTransformer = PermissionTransformer(this, rxLocationManager, this)
             locationRequestBuilder
-                    .addLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(30, TimeUnit.MINUTES), permissionTransformer)
-                    .addRequestLocation(LocationManager.NETWORK_PROVIDER, LocationTime(15, TimeUnit.SECONDS), permissionTransformer)
+                    .addLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(30, TimeUnit.MINUTES), transformers = permissionTransformer)
+                    .addRequestLocation(LocationManager.NETWORK_PROVIDER, LocationTime(15, TimeUnit.SECONDS), transformers = permissionTransformer)
                     .setDefaultLocation(Location(LocationManager.PASSIVE_PROVIDER))
                     .create()
         } else {
@@ -122,8 +122,8 @@ class MainActivity : AppCompatActivity(), BasePermissionTransformer.PermissionCa
         val ignoreError = IgnoreErrorTransformer(SecurityException::class.java)
 
         locationRequestBuilder
-                .addLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(30, TimeUnit.MINUTES), ignoreError)
-                .addRequestLocation(LocationManager.NETWORK_PROVIDER, LocationTime(15, TimeUnit.SECONDS), ignoreError)
+                .addLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(30, TimeUnit.MINUTES), transformers = ignoreError)
+                .addRequestLocation(LocationManager.NETWORK_PROVIDER, LocationTime(15, TimeUnit.SECONDS), transformers = ignoreError)
                 .setDefaultLocation(Location(LocationManager.PASSIVE_PROVIDER))
                 .create()
                 .testSubscribe("requestBuild")

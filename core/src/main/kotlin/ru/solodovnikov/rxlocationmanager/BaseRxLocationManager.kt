@@ -5,78 +5,15 @@ import android.location.Location
 import android.location.LocationManager
 import android.os.Build
 import android.os.SystemClock
-import java.util.concurrent.TimeoutException
 
-/**
- * Abstract class used just to implement rxJava1 and rxJava2
- */
-abstract class BaseRxLocationManager<out SINGLE,
-        out MAYBE,
-        out OBSERVABLE,
-        in SINGLE_TRANSFORMER,
-        in MAYBE_TRANSFORMER>(context: Context) {
+abstract class BaseRxLocationManager(context: Context) {
     protected val locationManager: LocationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-
-    /**
-     * Get last location from specific provider
-     * Observable will emit [ElderLocationException] if [howOldCanBe] is not null and location time is not valid.
-     *
-     * @param provider provider name
-     * @param howOldCanBe how old a location can be
-     * @param transformers extra transformers
-     * @return observable that emit last known location
-     * @see ElderLocationException
-     * @see ProviderHasNoLastLocationException
-     */
-    @JvmOverloads
-    fun getLastLocation(provider: String,
-                        howOldCanBe: LocationTime? = null,
-                        vararg transformers: MAYBE_TRANSFORMER): MAYBE =
-            baseGetLastLocation(provider, howOldCanBe, transformers)
-
-    /**
-     * Try to get current location by specific provider.
-     * Observable will emit [TimeoutException] if [timeOut] is not null and timeOut occurs.
-     * Observable will emit [ProviderDisabledException] if provider is disabled
-     *
-     * @param provider provider name
-     * @param timeOut  request timeout
-     * @param transformers extra transformers
-     * @return observable that emit current location
-     * @see TimeoutException
-     * @see ProviderDisabledException
-     */
-    @JvmOverloads
-    fun requestLocation(provider: String,
-                        timeOut: LocationTime? = null,
-                        vararg transformers: SINGLE_TRANSFORMER): SINGLE
-            = baseRequestLocation(provider, timeOut, transformers)
-
-    /**
-     * Register for location updates using a Criteria
-     *
-     * @param provider the name of the provider with which to register
-     * @param minTime minimum time interval between location updates, in milliseconds
-     * @param minDistance minimum distance between location updates, in meters
-     */
-    fun requestLocationUpdates(provider: String,
-                               minTime: Long,
-                               minDistance: Float): OBSERVABLE =
-            baseRequestLocationUpdates(provider, minTime, minDistance)
 
     /**
      * You need to call this method only if you use any [BasePermissionTransformer] implementations
      * @see android.app.Activity.onRequestPermissionsResult
      */
     abstract fun onRequestPermissionsResult(permissions: Array<out String>, grantResults: IntArray)
-
-    protected abstract fun baseGetLastLocation(provider: String, howOldCanBe: LocationTime?, transformers: Array<out MAYBE_TRANSFORMER>): MAYBE
-
-    protected abstract fun baseRequestLocation(provider: String, timeOut: LocationTime?, transformers: Array<out SINGLE_TRANSFORMER>): SINGLE
-
-    protected abstract fun baseRequestLocationUpdates(provider: String,
-                                                      minTime: Long,
-                                                      minDistance: Float): OBSERVABLE
 
     /**
      * Check is location not old
