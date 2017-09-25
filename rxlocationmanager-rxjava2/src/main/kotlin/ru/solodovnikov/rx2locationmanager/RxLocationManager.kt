@@ -1,7 +1,10 @@
 package ru.solodovnikov.rx2locationmanager
 
 import android.content.Context
-import android.location.*
+import android.location.Criteria
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import android.os.Bundle
 import io.reactivex.*
 import io.reactivex.android.schedulers.AndroidSchedulers
@@ -24,86 +27,14 @@ class RxLocationManager internal constructor(context: Context,
      *
      * @param provider provider name
      * @param howOldCanBe how old a location can be
-     * @param transformers extra transformers
+     * @param behaviors extra behaviors
      * @return observable that emit last known location
      * @see ElderLocationException
-     * @see ProviderHasNoLastLocationException
      */
     @JvmOverloads
     fun getLastLocation(provider: String,
                         howOldCanBe: LocationTime? = null,
-                        vararg transformers: MaybeTransformer<Location, Location>): Maybe<Location> =
-            baseGetLastLocation(provider, howOldCanBe, transformers)
-
-    /**
-     * Try to get current location by specific provider.
-     * Observable will emit [TimeoutException] if [timeOut] is not null and timeOut occurs.
-     * Observable will emit [ProviderDisabledException] if provider is disabled
-     *
-     * @param provider provider name
-     * @param timeOut  request timeout
-     * @param transformers extra transformers
-     * @return observable that emit current location
-     * @see TimeoutException
-     * @see ProviderDisabledException
-     */
-    @JvmOverloads
-    fun requestLocation(provider: String,
-                        timeOut: LocationTime? = null,
-                        vararg transformers: SingleTransformer<Location, Location>): Single<Location>
-            = baseRequestLocation(provider, timeOut, transformers)
-
-    /**
-     * Register for location updates using a Criteria
-     *
-     * @param provider the name of the provider with which to register
-     * @param minTime minimum time interval between location updates, in milliseconds
-     * @param minDistance minimum distance between location updates, in meters
-     */
-    fun requestLocationUpdates(provider: String,
-                               minTime: Long,
-                               minDistance: Float): Observable<Location> =
-            baseRequestLocationUpdates(provider, minTime, minDistance)
-
-    /**
-     * Returns a list of the names of all known location providers.
-     *
-     * @see LocationManager.getAllProviders
-     */
-    fun getAllProviders() = Single.fromCallable { locationManager.allProviders }
-
-    /**
-     * Returns the name of the provider that best meets the given criteria.
-     *
-     * @see LocationManager.getBestProvider
-     */
-    @JvmOverloads
-    fun getBestProvider(criteria: Criteria, enabledOnly: Boolean = true) =
-            Single.fromCallable { locationManager.getBestProvider(criteria, enabledOnly) }
-
-    /**
-     * Returns the information associated with the location provider of the given name, or null if no provider exists by that name.
-     *
-     * @param transformers extra transformers
-     * @see LocationManager.getProvider
-     */
-    fun getProvider(name: String, vararg transformers: MaybeTransformer<LocationProvider, LocationProvider>) =
-            Maybe.fromCallable { locationManager.getProvider(name) ?: throw NullEmittedException() }
-                    .onErrorComplete { it is NullEmittedException }
-                    .applyTransformers(transformers)
-
-    override fun onRequestPermissionsResult(permissions: Array<out String>, grantResults: IntArray) {
-        permissionSubject.onNext(Pair(permissions, grantResults))
-    }
-
-    internal fun subscribeToPermissionUpdate(onUpdate: (Pair<Array<out String>, IntArray>) -> Unit)
-            = permissionSubject.subscribe(onUpdate, {}, {})
-
-    /**
-     * @return Result [Maybe] will not emit any value if location is null.
-     * Or it will be emit [ElderLocationException] if [howOldCanBe] not null and location is too old
-     */
-    private fun baseGetLastLocation(provider: String, howOldCanBe: LocationTime?, transformers: Array<out MaybeTransformer<Location, Location>>): Maybe<Location> =
+                        vararg behaviors: MaybeBehavior): Maybe<Location> =
             Maybe.fromCallable { locationManager.getLastKnownLocation(provider) ?: throw NullEmittedException() }
                     .onErrorComplete { it is NullEmittedException }
                     .compose {
@@ -116,14 +47,25 @@ class RxLocationManager internal constructor(context: Context,
                         } else {
                             it
                         }
-                    }.applyTransformers(transformers)
+                    }.applyBehaviors(behaviors)
                     .compose(this::applySchedulers)
 
-
     /**
-     * @return Result [Single] can throw [ProviderDisabledException] or [TimeoutException] if [timeOut] not null
+     * Try to get current location by specific provider.
+     * Observable will emit [TimeoutException] if [timeOut] is not null and timeOut occurs.
+     * Observable will emit [ProviderDisabledException] if provider is disabled
+     *
+     * @param provider provider name
+     * @param timeOut  request timeout
+     * @param behaviors extra behaviors
+     * @return observable that emit current location
+     * @see TimeoutException
+     * @see ProviderDisabledException
      */
-    private fun baseRequestLocation(provider: String, timeOut: LocationTime?, transformers: Array<out SingleTransformer<Location, Location>>): Single<Location> =
+    @JvmOverloads
+    fun requestLocation(provider: String,
+                        timeOut: LocationTime? = null,
+                        vararg behaviors: SingleBehavior): Single<Location> =
             Single.create(SingleOnSubscribe<Location> {
                 if (locationManager.isProviderEnabled(provider)) {
                     val locationListener = object : LocationListener {
@@ -150,42 +92,94 @@ class RxLocationManager internal constructor(context: Context,
                     it.onError(ProviderDisabledException(provider))
                 }
             }).compose { if (timeOut != null) it.timeout(timeOut.time, timeOut.timeUnit) else it }
-                    .applyTransformers(transformers)
+                    .applyBehaviors(behaviors)
                     .compose(this::applySchedulers)
 
-    private fun baseRequestLocationUpdates(provider: String, minTime: Long, minDistance: Float): Observable<Location> {
-        Observable.create(ObservableOnSubscribe<Location> {
-            val locationListener = object : LocationListener {
-                override fun onLocationChanged(location: Location) {
-                    it.onNext(location)
+    /**
+     * Register for location updates using a Criteria
+     *
+     * @param provider the name of the provider with which to register
+     * @param minTime minimum time interval between location updates, in milliseconds
+     * @param minDistance minimum distance between location updates, in meters
+     */
+    @JvmOverloads
+    fun requestLocationUpdates(provider: String,
+                               minTime: Long = 0L,
+                               minDistance: Float = 0F,
+                               vararg behaviors: ObservableBehavior): Observable<Location> =
+            Observable.create(ObservableOnSubscribe<Location> {
+                if (locationManager.isProviderEnabled(provider)) {
+                    val locationListener = object : LocationListener {
+                        override fun onLocationChanged(location: Location) {
+                            it.onNext(location)
+                        }
+
+                        override fun onProviderDisabled(p: String?) {
+                            if (provider == p) {
+                                it.onError(ProviderDisabledException(p))
+                            }
+                        }
+
+                        override fun onStatusChanged(provider: String, p1: Int, p2: Bundle?) {}
+
+                        override fun onProviderEnabled(provider: String) {}
+                    }
+
+                    locationManager.requestLocationUpdates(provider, minTime, minDistance, locationListener)
+
+                    it.setCancellable { locationManager.removeUpdates(locationListener) }
+                } else {
+                    it.onError(ProviderDisabledException(provider))
                 }
+            }).applyBehaviors(behaviors).compose(this::applySchedulers)
 
-                override fun onProviderDisabled(p: String?) {
-                }
+    /**
+     * Returns a list of the names of all known location providers.
+     *
+     * @see LocationManager.getAllProviders
+     */
+    fun getAllProviders() = Single.fromCallable { locationManager.allProviders }
 
-                override fun onStatusChanged(p0: String?, p1: Int, p2: Bundle?) {}
+    /**
+     * Returns the name of the provider that best meets the given criteria.
+     *
+     * @see LocationManager.getBestProvider
+     */
+    @JvmOverloads
+    fun getBestProvider(criteria: Criteria, enabledOnly: Boolean = true) =
+            Single.fromCallable { locationManager.getBestProvider(criteria, enabledOnly) }
 
-                override fun onProviderEnabled(p: String?) {}
-            }
+    /**
+     * Returns the information associated with the location provider of the given name, or null if no provider exists by that name.
+     *
+     * @param behaviors extra behaviors
+     * @see LocationManager.getProvider
+     */
+    fun getProvider(name: String, vararg behaviors: MaybeBehavior) =
+            Maybe.fromCallable { locationManager.getProvider(name) ?: throw NullEmittedException() }
+                    .onErrorComplete { it is NullEmittedException }
+                    .applyBehaviors(behaviors)
 
-            locationManager.requestLocationUpdates(provider, minTime, minDistance, locationListener)
-
-            it.setCancellable { locationManager.removeUpdates(locationListener) }
-        })
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    override fun onRequestPermissionsResult(permissions: Array<out String>, grantResults: IntArray) {
+        permissionSubject.onNext(Pair(permissions, grantResults))
     }
 
-    private fun <T> Single<T>.applyTransformers(transformers: Array<out SingleTransformer<T, T>>) =
-            let { transformers.fold(it, { acc, transformer -> acc.compose(transformer) }) ?: it }
+    internal fun subscribeToPermissionUpdate(onUpdate: (Pair<Array<out String>, IntArray>) -> Unit)
+            = permissionSubject.subscribe(onUpdate, {}, {})
 
-    private fun <T> Maybe<T>.applyTransformers(transformers: Array<out MaybeTransformer<T, T>>) =
-            let { transformers.fold(it, { acc, transformer -> acc.compose(transformer) }) ?: it }
+    private fun <T> Single<T>.applyBehaviors(behaviors: Array<out SingleBehavior>) =
+            let { behaviors.fold(it, { acc, transformer -> transformer.transform(acc) }) }
 
-    private fun <T> Observable<T>.applyTransformers(transformers: Array<out ObservableTransformer<T, T>>) =
-            let { transformers.fold(it, { acc, transformer -> acc.compose(transformer) }) ?: it }
+    private fun <T> Maybe<T>.applyBehaviors(behaviors: Array<out MaybeBehavior>) =
+            let { behaviors.fold(it, { acc, transformer -> transformer.transform(acc) }) }
+
+    private fun <T> Observable<T>.applyBehaviors(behaviors: Array<out ObservableBehavior>) =
+            let { behaviors.fold(it, { acc, transformer -> transformer.transform(acc) }) }
 
     private fun applySchedulers(s: Single<Location>) = s.subscribeOn(scheduler)
 
     private fun applySchedulers(m: Maybe<Location>) = m.subscribeOn(scheduler)
+
+    private fun applySchedulers(m: Observable<Location>) = m.subscribeOn(scheduler)
 }
 

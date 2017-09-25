@@ -10,8 +10,8 @@ import android.os.Build
  * @param context any [Context] of your application
  * @param callback used to request permissions from [android.app.Activity]
  */
-abstract class BasePermissionTransformer(context: Context,
-                                         protected val callback: BasePermissionTransformer.PermissionCallback) {
+abstract class BasePermissionBehavior(context: Context,
+                                      protected val callback: BasePermissionBehavior.PermissionCallback) {
     protected val context: Context = context.applicationContext
 
     /**
@@ -34,7 +34,7 @@ abstract class BasePermissionTransformer(context: Context,
             }
 
     /**
-     * Used by [BasePermissionTransformer] to request permissions from [android.app.Activity]
+     * Used by [BasePermissionBehavior] to request permissions from [android.app.Activity]
      */
     interface PermissionCallback {
         /**

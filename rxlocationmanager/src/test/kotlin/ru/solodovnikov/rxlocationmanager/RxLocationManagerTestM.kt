@@ -57,8 +57,8 @@ class RxLocationManagerTestM {
     }
 
     @Test
-    fun test_PermissionTransformerSuccess() {
-        val callback: BasePermissionTransformer.PermissionCallback = mock()
+    fun test_PermissionBehaviorSuccess() {
+        val callback: BasePermissionBehavior.PermissionCallback = mock()
         val location: Location = mock()
 
         whenever(context.applicationContext.checkSelfPermission(any()))
@@ -67,7 +67,7 @@ class RxLocationManagerTestM {
                 .thenReturn(location)
 
         val susbcriber = defaultRxLocationManager.getLastLocation(networkProvider,
-                transformers = PermissionTransformer(context, defaultRxLocationManager, callback))
+                behaviors = PermissionBehavior(context, defaultRxLocationManager, callback))
                 .test()
 
         Thread.sleep(100L)
@@ -92,13 +92,13 @@ class RxLocationManagerTestM {
 
     @Test
     fun test_PermissionTransformerDenied() {
-        val callback: BasePermissionTransformer.PermissionCallback = mock()
+        val callback: BasePermissionBehavior.PermissionCallback = mock()
 
         whenever(context.applicationContext.checkSelfPermission(any()))
                 .thenReturn(PackageManager.PERMISSION_DENIED)
 
         val susbcriber = defaultRxLocationManager.getLastLocation(networkProvider,
-                transformers = PermissionTransformer(context, defaultRxLocationManager, callback))
+                behaviors = PermissionBehavior(context, defaultRxLocationManager, callback))
                 .test()
 
         Thread.sleep(100L)
@@ -121,7 +121,7 @@ class RxLocationManagerTestM {
 
     @Test
     fun test_PermissionTransformerBuilder() {
-        val callback: BasePermissionTransformer.PermissionCallback = mock()
+        val callback: BasePermissionBehavior.PermissionCallback = mock()
         val locationBuilder = LocationRequestBuilder(defaultRxLocationManager)
         val location: Location = mock()
 
@@ -141,10 +141,10 @@ class RxLocationManagerTestM {
             return@doAnswer null
         }.whenever(locationManager).requestSingleUpdate(eq(networkProvider), any(), isNull())
 
-        val permissionTransformer = PermissionTransformer(context, defaultRxLocationManager, callback)
+        val permissionTransformer = PermissionBehavior(context, defaultRxLocationManager, callback)
 
-        val susbcriber = locationBuilder.addLastLocation(networkProvider, transformers = permissionTransformer)
-                .addRequestLocation(networkProvider, transformers = permissionTransformer)
+        val susbcriber = locationBuilder.addLastLocation(networkProvider, behaviors = permissionTransformer)
+                .addRequestLocation(networkProvider, behaviors = permissionTransformer)
                 .create()
                 .test()
 

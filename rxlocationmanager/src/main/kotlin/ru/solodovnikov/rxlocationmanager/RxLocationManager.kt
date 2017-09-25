@@ -1,14 +1,16 @@
 package ru.solodovnikov.rxlocationmanager
 
 import android.content.Context
-import android.location.*
+import android.location.Criteria
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import android.os.Bundle
 import rx.Emitter
 import rx.Observable
 import rx.Scheduler
 import rx.Single
 import rx.android.schedulers.AndroidSchedulers
-import rx.functions.Action1
 import rx.subjects.PublishSubject
 import java.util.concurrent.TimeoutException
 
@@ -29,15 +31,27 @@ class RxLocationManager internal constructor(context: Context,
      *
      * @param provider provider name
      * @param howOldCanBe how old a location can be
-     * @param transformers extra transformers
+     * @param behaviors extra behaviors
      * @return observable that emit last known location
      * @see ElderLocationException
      */
     @JvmOverloads
     fun getLastLocation(provider: String,
                         howOldCanBe: LocationTime? = null,
-                        vararg transformers: TransformerSingle<Location, Location>): Single<Location> =
-            baseGetLastLocation(provider, howOldCanBe, transformers)
+                        vararg behaviors: SingleBehavior): Single<Location> =
+            Single.fromCallable { locationManager.getLastKnownLocation(provider) }
+                    .compose {
+                        if (howOldCanBe != null) {
+                            it.doOnSuccess {
+                                if (it != null && !it.isNotOld(howOldCanBe)) {
+                                    throw ElderLocationException(it)
+                                }
+                            }
+                        } else {
+                            it
+                        }
+                    }.applyBehaviors(behaviors)
+                    .compose(this::applySchedulers)
 
     /**
      * Try to get current location by specific provider.
@@ -46,7 +60,7 @@ class RxLocationManager internal constructor(context: Context,
      *
      * @param provider provider name
      * @param timeOut  request timeout
-     * @param transformers extra transformers
+     * @param behaviors extra behaviors
      * @return observable that emit current location
      * @see TimeoutException
      * @see ProviderDisabledException
@@ -54,8 +68,40 @@ class RxLocationManager internal constructor(context: Context,
     @JvmOverloads
     fun requestLocation(provider: String,
                         timeOut: LocationTime? = null,
-                        vararg transformers: TransformerSingle<Location, Location>): Single<Location>
-            = baseRequestLocation(provider, timeOut, transformers)
+                        vararg behaviors: SingleBehavior): Single<Location> =
+            Observable.create<Location>({
+                if (locationManager.isProviderEnabled(provider)) {
+                    val locationListener = object : LocationListener {
+                        override fun onLocationChanged(location: Location) {
+                            with(it) {
+                                onNext(location)
+                                onCompleted()
+                            }
+                        }
+
+                        override fun onProviderDisabled(p: String?) {
+                            if (provider == p) {
+                                it.onError(ProviderDisabledException(provider))
+                            }
+                        }
+
+                        override fun onStatusChanged(p0: String?, p1: Int, p2: Bundle?) {}
+
+                        override fun onProviderEnabled(p0: String?) {}
+                    }
+
+                    locationManager.requestSingleUpdate(provider, locationListener, null)
+
+                    it.setCancellation { locationManager.removeUpdates(locationListener) }
+
+                } else {
+                    it.onError(ProviderDisabledException(provider))
+                }
+            }, Emitter.BackpressureMode.NONE)
+                    .toSingle()
+                    .compose { if (timeOut != null) it.timeout(timeOut.time, timeOut.timeUnit) else it }
+                    .applyBehaviors(behaviors)
+                    .compose(this::applySchedulers)
 
     /**
      * Register for location updates using a Criteria
@@ -63,11 +109,42 @@ class RxLocationManager internal constructor(context: Context,
      * @param provider the name of the provider with which to register
      * @param minTime minimum time interval between location updates, in milliseconds
      * @param minDistance minimum distance between location updates, in meters
+     *
+     * @see LocationManager.requestLocationUpdates
      */
+    @JvmOverloads
     fun requestLocationUpdates(provider: String,
-                               minTime: Long,
-                               minDistance: Float): Observable<Location> =
-            baseRequestLocationUpdates(provider, minTime, minDistance)
+                               minTime: Long = 0L,
+                               minDistance: Float = 0F,
+                               vararg behaviors: ObservableBehavior): Observable<Location> =
+            Observable.create<Location>({
+                if (locationManager.isProviderEnabled(provider)) {
+                    val locationListener = object : LocationListener {
+                        override fun onLocationChanged(location: Location) {
+                            it.onNext(location)
+                        }
+
+                        override fun onProviderDisabled(p: String) {
+                            if (provider == p) {
+                                it.onError(ProviderDisabledException(provider))
+                            }
+                        }
+
+                        override fun onStatusChanged(p0: String?, p1: Int, p2: Bundle?) {}
+
+                        override fun onProviderEnabled(p0: String?) {}
+                    }
+
+                    locationManager.requestLocationUpdates(provider, minTime, minDistance, locationListener)
+
+                    it.setCancellation { locationManager.removeUpdates(locationListener) }
+
+                } else {
+                    it.onError(ProviderDisabledException(provider))
+                }
+            }, Emitter.BackpressureMode.NONE)
+                    .applyBehaviors(behaviors)
+                    .compose(this::applySchedulers)
 
     /**
      * Returns a list of the names of all known location providers.
@@ -88,12 +165,12 @@ class RxLocationManager internal constructor(context: Context,
     /**
      * Returns the information associated with the location provider of the given name, or null if no provider exists by that name.
      *
-     * @param transformers extra transformers
+     * @param behaviors extra behaviors
      * @see LocationManager.getProvider
      */
-    fun getProvider(name: String, vararg transformers: TransformerSingle<LocationProvider, LocationProvider>) =
+    fun getProvider(name: String, vararg behaviors: SingleBehavior) =
             Single.fromCallable { locationManager.getProvider(name) }
-                    .applyTransformers(transformers)
+                    .applyBehaviors(behaviors)
 
     override fun onRequestPermissionsResult(permissions: Array<out String>, grantResults: IntArray) {
         permissionSubject.onNext(Pair(permissions, grantResults))
@@ -102,83 +179,15 @@ class RxLocationManager internal constructor(context: Context,
     internal fun subscribeToPermissionUpdate(onUpdate: (Pair<Array<out String>, IntArray>) -> Unit)
             = permissionSubject.subscribe(onUpdate, {}, {})
 
-    /**
-     * @return Result [Single] will emit null if there is no location by this [provider].
-     * Or it will be emit [ElderLocationException] if [howOldCanBe] not null and location is too old.
-     */
-    private fun baseGetLastLocation(provider: String,
-                                    howOldCanBe: LocationTime?,
-                                    transformers: Array<out TransformerSingle<Location, Location>>): Single<Location> =
-            Single.fromCallable { locationManager.getLastKnownLocation(provider) }
-                    .compose {
-                        if (howOldCanBe != null) {
-                            it.doOnSuccess {
-                                if (it != null && !it.isNotOld(howOldCanBe)) {
-                                    throw ElderLocationException(it)
-                                }
-                            }
-                        } else {
-                            it
-                        }
-                    }.applyTransformers(transformers)
-                    .compose(this::applySchedulers)
-
-    /**
-     * @return Result [Single] can throw [ProviderDisabledException] or [TimeoutException] if [timeOut] not null
-     */
-    private fun baseRequestLocation(provider: String,
-                                    timeOut: LocationTime?,
-                                    transformers: Array<out TransformerSingle<Location, Location>>): Single<Location> =
-            Observable.create(RxLocationListener(locationManager, provider), Emitter.BackpressureMode.NONE)
-                    .toSingle()
-                    .compose { if (timeOut != null) it.timeout(timeOut.time, timeOut.timeUnit) else it }
-                    .applyTransformers(transformers)
-                    .compose(this::applySchedulers)
-
-    private fun baseRequestLocationUpdates(provider: String, minTime: Long, minDistance: Float): Observable<Location> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
     private fun applySchedulers(s: Single<Location>) = s.subscribeOn(scheduler)
 
-    private fun <T, R> Single<T>.applyTransformers(transformers: Array<out TransformerSingle<T, R>>) =
-            let { transformers.fold(it, { acc, transformer -> transformer.transform(acc) }) }
+    private fun applySchedulers(s: Observable<Location>) = s.subscribeOn(scheduler)
 
-    private fun <T, R> Observable<T>.applyTransformers(transformers: Array<out TransformerObservable<T, R>>) =
-            let { transformers.fold(it, { acc, transformer -> transformer.transform(acc) }) }
+    private fun <T> Single<T>.applyBehaviors(behaviors: Array<out SingleBehavior>) =
+            let { behaviors.fold(it, { acc, transformer -> transformer.transform(acc) }) }
 
-    private class RxLocationListener(val locationManager: LocationManager, val provider: String) : Action1<Emitter<Location>> {
-
-        override fun call(emitter: Emitter<Location>) {
-            if (locationManager.isProviderEnabled(provider)) {
-                val locationListener = object : LocationListener {
-                    override fun onLocationChanged(location: Location?) {
-                        with(emitter) {
-                            onNext(location)
-                            onCompleted()
-                        }
-                    }
-
-                    override fun onProviderDisabled(p: String?) {
-                        if (provider == p) {
-                            emitter.onError(ProviderDisabledException(provider))
-                        }
-                    }
-
-                    override fun onStatusChanged(p0: String?, p1: Int, p2: Bundle?) {}
-
-                    override fun onProviderEnabled(p0: String?) {}
-                }
-
-                locationManager.requestSingleUpdate(provider, locationListener, null)
-
-                emitter.setCancellation { locationManager.removeUpdates(locationListener) }
-
-            } else {
-                emitter.onError(ProviderDisabledException(provider))
-            }
-        }
-    }
+    private fun <T> Observable<T>.applyBehaviors(behaviors: Array<out ObservableBehavior>) =
+            let { behaviors.fold(it, { acc, transformer -> transformer.transform(acc) }) }
 }
 
 

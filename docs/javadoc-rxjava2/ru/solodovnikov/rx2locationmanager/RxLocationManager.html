@@ -186,20 +186,20 @@ extends BaseRxLocationManager</pre>
                                 <td class="colFirst"><code>io.reactivex.Maybe&lt;android.location.Location&gt;</code>
                                 </td>
                                 <td class="colLast"><code><span class="memberNameLink"><a
-                                        href="../../../ru/solodovnikov/rx2locationmanager/RxLocationManager.html#baseGetLastLocation-provider-howOldCanBe-transformers-">baseGetLastLocation</a></span>(java.lang.String&nbsp;provider,
+                                        href="../../../ru/solodovnikov/rx2locationmanager/RxLocationManager.html#baseGetLastLocation-provider-howOldCanBe-behaviors-">baseGetLastLocation</a></span>(java.lang.String&nbsp;provider,
                                     <a href="../../../ru/solodovnikov/rx2locationmanager/LocationTime.html"
                                        title="type parameter in LocationTime">LocationTime</a>&nbsp;howOldCanBe,
-                                    io.reactivex.MaybeTransformer[]&nbsp;transformers)</code>&nbsp;
+                                    io.reactivex.MaybeTransformer[]&nbsp;behaviors)</code>&nbsp;
                                 </td>
                             </tr>
                             <tr id="i1" class="rowColor">
                                 <td class="colFirst"><code>io.reactivex.Single&lt;android.location.Location&gt;</code>
                                 </td>
                                 <td class="colLast"><code><span class="memberNameLink"><a
-                                        href="../../../ru/solodovnikov/rx2locationmanager/RxLocationManager.html#baseRequestLocation-provider-timeOut-transformers-">baseRequestLocation</a></span>(java.lang.String&nbsp;provider,
+                                        href="../../../ru/solodovnikov/rx2locationmanager/RxLocationManager.html#baseRequestLocation-provider-timeOut-behaviors-">baseRequestLocation</a></span>(java.lang.String&nbsp;provider,
                                     <a href="../../../ru/solodovnikov/rx2locationmanager/LocationTime.html"
                                        title="type parameter in LocationTime">LocationTime</a>&nbsp;timeOut,
-                                    io.reactivex.SingleTransformer[]&nbsp;transformers)</code>&nbsp;
+                                    io.reactivex.SingleTransformer[]&nbsp;behaviors)</code>&nbsp;
                                 </td>
                             </tr>
                             <tr id="i2" class="altColor">
@@ -226,15 +226,15 @@ extends BaseRxLocationManager</pre>
                                         title="class in ru.solodovnikov.rx2locationmanager">BaseRxLocationManager</a>
                                 </h3>
                                 <code><a
-                                        href="../../../ru/solodovnikov/rx2locationmanager/BaseRxLocationManager.html#baseGetLastLocation-provider-howOldCanBe-transformers-">baseGetLastLocation</a>,
-                                    <a href="../../../ru/solodovnikov/rx2locationmanager/BaseRxLocationManager.html#baseRequestLocation-provider-timeOut-transformers-">baseRequestLocation</a>,
-                                    <a href="../../../ru/solodovnikov/rx2locationmanager/BaseRxLocationManager.html#getLastLocation-provider-howOldCanBe-transformers-">getLastLocation</a>,
-                                    <a href="../../../ru/solodovnikov/rx2locationmanager/BaseRxLocationManager.html#getLastLocation-provider-transformers-">getLastLocation</a>,
+                                        href="../../../ru/solodovnikov/rx2locationmanager/BaseRxLocationManager.html#baseGetLastLocation-provider-howOldCanBe-behaviors-">baseGetLastLocation</a>,
+                                    <a href="../../../ru/solodovnikov/rx2locationmanager/BaseRxLocationManager.html#baseRequestLocation-provider-timeOut-behaviors-">baseRequestLocation</a>,
+                                    <a href="../../../ru/solodovnikov/rx2locationmanager/BaseRxLocationManager.html#getLastLocation-provider-howOldCanBe-behaviors-">getLastLocation</a>,
+                                    <a href="../../../ru/solodovnikov/rx2locationmanager/BaseRxLocationManager.html#getLastLocation-provider-behaviors-">getLastLocation</a>,
                                     <a href="../../../ru/solodovnikov/rx2locationmanager/BaseRxLocationManager.html#getLocationManager--">getLocationManager</a>,
                                     <a href="../../../ru/solodovnikov/rx2locationmanager/BaseRxLocationManager.html#isNotOld-:Dreceiver-howOldCanBe-">isNotOld</a>,
                                     <a href="../../../ru/solodovnikov/rx2locationmanager/BaseRxLocationManager.html#onRequestPermissionsResult-permissions-grantResults-">onRequestPermissionsResult</a>,
-                                    <a href="../../../ru/solodovnikov/rx2locationmanager/BaseRxLocationManager.html#requestLocation-provider-timeOut-transformers-">requestLocation</a>,
-                                    <a href="../../../ru/solodovnikov/rx2locationmanager/BaseRxLocationManager.html#requestLocation-provider-transformers-">requestLocation</a></code>
+                                    <a href="../../../ru/solodovnikov/rx2locationmanager/BaseRxLocationManager.html#requestLocation-provider-timeOut-behaviors-">requestLocation</a>,
+                                    <a href="../../../ru/solodovnikov/rx2locationmanager/BaseRxLocationManager.html#requestLocation-provider-behaviors-">requestLocation</a></code>
                             </li>
                         </ul>
                     </li>
@@ -268,7 +268,7 @@ extends BaseRxLocationManager</pre>
                         <!--   -->
                     </a>
                         <h3>Method Detail</h3>
-                        <a name="baseGetLastLocation-provider-howOldCanBe-transformers-">
+                        <a name="baseGetLastLocation-provider-howOldCanBe-behaviors-">
                             <!--   -->
                         </a>
                         <ul class="blockList">
@@ -277,7 +277,7 @@ extends BaseRxLocationManager</pre>
                                 <pre>public&nbsp;io.reactivex.Maybe&lt;android.location.Location&gt;&nbsp;baseGetLastLocation(java.lang.String&nbsp;provider,
                                                                          <a href="../../../ru/solodovnikov/rx2locationmanager/LocationTime.html"
                                                                             title="type parameter in LocationTime">LocationTime</a>&nbsp;howOldCanBe,
-                                                                         io.reactivex.MaybeTransformer[]&nbsp;transformers)</pre>
+                                                                         io.reactivex.MaybeTransformer[]&nbsp;behaviors)</pre>
                                 <dl>
                                     <dt><span class="returnLabel">Returns:</span></dt>
                                     <dd>Result Maybe will not emit any value if location is null.
@@ -290,7 +290,7 @@ extends BaseRxLocationManager</pre>
                                 </dl>
                             </li>
                         </ul>
-                        <a name="baseRequestLocation-provider-timeOut-transformers-">
+                        <a name="baseRequestLocation-provider-timeOut-behaviors-">
                             <!--   -->
                         </a>
                         <ul class="blockList">
@@ -299,7 +299,7 @@ extends BaseRxLocationManager</pre>
                                 <pre>public&nbsp;io.reactivex.Single&lt;android.location.Location&gt;&nbsp;baseRequestLocation(java.lang.String&nbsp;provider,
                                                                           <a href="../../../ru/solodovnikov/rx2locationmanager/LocationTime.html"
                                                                              title="type parameter in LocationTime">LocationTime</a>&nbsp;timeOut,
-                                                                          io.reactivex.SingleTransformer[]&nbsp;transformers)</pre>
+                                                                          io.reactivex.SingleTransformer[]&nbsp;behaviors)</pre>
                                 <dl>
                                     <dt><span class="returnLabel">Returns:</span></dt>
                                     <dd>Result Single can throw <a

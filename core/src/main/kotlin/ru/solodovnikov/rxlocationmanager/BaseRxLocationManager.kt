@@ -10,7 +10,7 @@ abstract class BaseRxLocationManager(context: Context) {
     protected val locationManager: LocationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
     /**
-     * You need to call this method only if you use any [BasePermissionTransformer] implementations
+     * You need to call this method only if you use any [BasePermissionBehavior] implementations
      * @see android.app.Activity.onRequestPermissionsResult
      */
     abstract fun onRequestPermissionsResult(permissions: Array<out String>, grantResults: IntArray)

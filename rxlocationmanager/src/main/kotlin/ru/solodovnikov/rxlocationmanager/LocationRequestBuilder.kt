@@ -22,12 +22,12 @@ class LocationRequestBuilder(rxLocationManager: RxLocationManager
     /**
      * Try to get current location by specific [provider].
      * It will ignore any library exceptions (e.g [ProviderDisabledException]).
-     * But will fall if any other exception will occur. This can be changed via [transformers].
+     * But will fall if any other exception will occur. This can be changed via [behaviors].
      *
      * @param provider    provider name
      * @param timeOut     request timeout
      * @param isNullValid if true, then this request can emit null value
-     * @param transformers extra transformers
+     * @param behaviors extra behaviors
      *
      * @return same builder
      * @see baseAddRequestLocation
@@ -36,18 +36,30 @@ class LocationRequestBuilder(rxLocationManager: RxLocationManager
     fun addRequestLocation(provider: String,
                            timeOut: LocationTime? = null,
                            isNullValid: Boolean = false,
-                           vararg transformers: TransformerSingle<Location, Location>): LocationRequestBuilder =
-            baseAddRequestLocation(provider, timeOut, isNullValid, transformers)
+                           vararg behaviors: SingleBehavior): LocationRequestBuilder =
+            rxLocationManager.requestLocation(provider, timeOut, *behaviors)
+                    .toObservable()
+                    .onErrorResumeNext {
+                        when (it) {
+                            is TimeoutException, is ProviderDisabledException, is IgnorableException -> Observable.empty<Location>()
+                            else -> Observable.error<Location>(it)
+                        }
+                    }
+                    .flatMap { if (it == null && !isNullValid) Observable.empty() else Observable.just(it) }
+                    .let {
+                        resultObservable = resultObservable.concatWith(it)
+                        this
+                    }
 
     /**
      * Get last location from specific [provider].
      * It will ignore any library exceptions (e.g [ElderLocationException]).
-     * But will fall if any other exception will occur. This can be changed via [transformers].
+     * But will fall if any other exception will occur. This can be changed via [behaviors].
      *
      * @param provider    provider name
      * @param howOldCanBe how old a location can be
      * @param isNullValid if true, then this request can emit null value
-     * @param transformers extra transformers
+     * @param behaviors extra behaviors
      *
      * @return same builder
      * @see baseAddLastLocation
@@ -56,8 +68,20 @@ class LocationRequestBuilder(rxLocationManager: RxLocationManager
     fun addLastLocation(provider: String,
                         howOldCanBe: LocationTime? = null,
                         isNullValid: Boolean = false,
-                        vararg transformers: TransformerSingle<Location, Location>): LocationRequestBuilder =
-            baseAddLastLocation(provider, howOldCanBe, isNullValid, transformers)
+                        vararg behaviors: SingleBehavior): LocationRequestBuilder =
+            rxLocationManager.getLastLocation(provider, howOldCanBe, *behaviors)
+                    .toObservable()
+                    .onErrorResumeNext {
+                        when (it) {
+                            is ElderLocationException, is IgnorableException -> Observable.empty<Location>()
+                            else -> Observable.error<Location>(it)
+                        }
+                    }
+                    .flatMap { if (it == null && !isNullValid) Observable.empty() else Observable.just(it) }
+                    .let {
+                        resultObservable = resultObservable.concatWith(it)
+                        this
+                    }
 
 
     /**
@@ -80,40 +104,4 @@ class LocationRequestBuilder(rxLocationManager: RxLocationManager
     fun create(): Single<Location> =
             resultObservable.firstOrDefault(defaultLocation)
                     .toSingle()
-
-    private fun baseAddRequestLocation(provider: String,
-                                       timeOut: LocationTime?,
-                                       isNullValid: Boolean = false,
-                                       transformers: Array<out TransformerSingle<Location, Location>>): LocationRequestBuilder =
-            rxLocationManager.requestLocation(provider, timeOut, *transformers)
-                    .toObservable()
-                    .onErrorResumeNext {
-                        when (it) {
-                            is TimeoutException, is ProviderDisabledException, is IgnorableException -> Observable.empty<Location>()
-                            else -> Observable.error<Location>(it)
-                        }
-                    }
-                    .flatMap { if (it == null && !isNullValid) Observable.empty() else Observable.just(it) }
-                    .let {
-                        resultObservable = resultObservable.concatWith(it)
-                        this
-                    }
-
-    private fun baseAddLastLocation(provider: String,
-                                    howOldCanBe: LocationTime?,
-                                    isNullValid: Boolean = false,
-                                    transformers: Array<out TransformerSingle<Location, Location>>): LocationRequestBuilder =
-            rxLocationManager.getLastLocation(provider, howOldCanBe, *transformers)
-                    .toObservable()
-                    .onErrorResumeNext {
-                        when (it) {
-                            is ElderLocationException, is IgnorableException -> Observable.empty<Location>()
-                            else -> Observable.error<Location>(it)
-                        }
-                    }
-                    .flatMap { if (it == null && !isNullValid) Observable.empty() else Observable.just(it) }
-                    .let {
-                        resultObservable = resultObservable.concatWith(it)
-                        this
-                    }
 }

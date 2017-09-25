@@ -3,9 +3,7 @@ package ru.solodovnikov.rx2locationmanager
 import android.content.Context
 import android.location.Location
 import io.reactivex.Maybe
-import io.reactivex.MaybeTransformer
 import io.reactivex.Observable
-import io.reactivex.SingleTransformer
 import io.reactivex.functions.Function
 import java.util.concurrent.TimeoutException
 
@@ -25,11 +23,11 @@ class LocationRequestBuilder(rxLocationManager: RxLocationManager
     /**
      * Try to get current location by specific [provider].
      * It will ignore any library exceptions (e.g [ProviderDisabledException]).
-     * But will fall if any other exception will occur. This can be changed via [transformers].
+     * But will fall if any other exception will occur. This can be changed via [behaviors].
      *
      * @param provider    provider name
      * @param timeOut     request timeout
-     * @param transformers extra transformers
+     * @param behaviors extra behaviors
      *
      * @return same builder
      * @see baseAddRequestLocation
@@ -37,17 +35,31 @@ class LocationRequestBuilder(rxLocationManager: RxLocationManager
     @JvmOverloads
     fun addRequestLocation(provider: String,
                            timeOut: LocationTime? = null,
-                           vararg transformers: SingleTransformer<Location, Location>): LocationRequestBuilder =
-            baseAddRequestLocation(provider, timeOut, transformers)
+                           vararg behaviors: SingleBehavior): LocationRequestBuilder =
+            rxLocationManager.requestLocation(provider, timeOut, *behaviors)
+                    .toMaybe()
+                    .toObservable()
+                    .onErrorResumeNext(Function {
+                        when (it) {
+                            is TimeoutException,
+                            is ProviderDisabledException,
+                            is IgnorableException -> Observable.empty<Location>()
+                            else -> Observable.error<Location>(it)
+                        }
+                    })
+                    .let {
+                        resultObservable = resultObservable.concatWith(it)
+                        this
+                    }
 
     /**
      * Get last location from specific [provider].
      * It will ignore any library exceptions (e.g [ElderLocationException]).
-     * But will fall if any other exception will occur. This can be changed via [transformers].
+     * But will fall if any other exception will occur. This can be changed via [behaviors].
      *
      * @param provider    provider name
      * @param howOldCanBe how old a location can be
-     * @param transformers extra transformers
+     * @param behaviors extra behaviors
      *
      * @return same builder
      * @see baseAddLastLocation
@@ -55,8 +67,20 @@ class LocationRequestBuilder(rxLocationManager: RxLocationManager
     @JvmOverloads
     fun addLastLocation(provider: String,
                         howOldCanBe: LocationTime? = null,
-                        vararg transformers: MaybeTransformer<Location, Location>): LocationRequestBuilder =
-            baseAddLastLocation(provider, howOldCanBe, transformers)
+                        vararg behaviors: MaybeBehavior): LocationRequestBuilder =
+            rxLocationManager.getLastLocation(provider, howOldCanBe, *behaviors)
+                    .toObservable()
+                    .onErrorResumeNext(Function {
+                        when (it) {
+                            is ElderLocationException,
+                            is IgnorableException -> Observable.empty<Location>()
+                            else -> Observable.error<Location>(it)
+                        }
+                    })
+                    .let {
+                        resultObservable = resultObservable.concatWith(it)
+                        this
+                    }
 
 
     /**
@@ -79,40 +103,4 @@ class LocationRequestBuilder(rxLocationManager: RxLocationManager
     fun create(): Maybe<Location> =
             resultObservable.firstElement()
                     .compose { if (defaultLocation != null) it.defaultIfEmpty(defaultLocation) else it }
-
-    private fun baseAddRequestLocation(provider: String,
-                                       timeOut: LocationTime?,
-                                       transformers: Array<out SingleTransformer<Location, Location>>): LocationRequestBuilder =
-            rxLocationManager.requestLocation(provider, timeOut, *transformers)
-                    .toMaybe()
-                    .toObservable()
-                    .onErrorResumeNext(Function {
-                        when (it) {
-                            is TimeoutException,
-                            is ProviderDisabledException,
-                            is IgnorableException -> Observable.empty<Location>()
-                            else -> Observable.error<Location>(it)
-                        }
-                    })
-                    .let {
-                        resultObservable = resultObservable.concatWith(it)
-                        this
-                    }
-
-    private fun baseAddLastLocation(provider: String,
-                                    howOldCanBe: LocationTime?,
-                                    transformers: Array<out MaybeTransformer<Location, Location>>): LocationRequestBuilder =
-            rxLocationManager.getLastLocation(provider, howOldCanBe, *transformers)
-                    .toObservable()
-                    .onErrorResumeNext(Function {
-                        when (it) {
-                            is ElderLocationException,
-                            is IgnorableException -> Observable.empty<Location>()
-                            else -> Observable.error<Location>(it)
-                        }
-                    })
-                    .let {
-                        resultObservable = resultObservable.concatWith(it)
-                        this
-                    }
 }

@@ -19,14 +19,14 @@ import io.reactivex.Maybe;
 import io.reactivex.Single;
 import io.reactivex.functions.Action;
 import io.reactivex.functions.Consumer;
-import ru.solodovnikov.rx2locationmanager.BasePermissionTransformer;
-import ru.solodovnikov.rx2locationmanager.IgnoreErrorTransformer;
+import ru.solodovnikov.rx2locationmanager.BasePermissionBehavior;
+import ru.solodovnikov.rx2locationmanager.IgnoreErrorBehavior;
 import ru.solodovnikov.rx2locationmanager.LocationRequestBuilder;
 import ru.solodovnikov.rx2locationmanager.LocationTime;
-import ru.solodovnikov.rx2locationmanager.PermissionTransformer;
+import ru.solodovnikov.rx2locationmanager.PermissionBehavior;
 import ru.solodovnikov.rx2locationmanager.RxLocationManager;
 
-public class MainActivity extends AppCompatActivity implements BasePermissionTransformer.PermissionCallback {
+public class MainActivity extends AppCompatActivity implements BasePermissionBehavior.PermissionCallback {
     private static final int REQUEST_CODE_LOCATION_PERMISSIONS = 150;
 
     private RxLocationManager rxLocationManager;
@@ -44,7 +44,7 @@ public class MainActivity extends AppCompatActivity implements BasePermissionTra
         rxLocationManager = new RxLocationManager(this);
         locationRequestBuilder = new LocationRequestBuilder(rxLocationManager);
 
-        coordinatorLayout = (CoordinatorLayout) findViewById(R.id.root);
+        coordinatorLayout = findViewById(R.id.root);
 
         setSupportActionBar((Toolbar) findViewById(R.id.toolbar));
     }
@@ -98,7 +98,7 @@ public class MainActivity extends AppCompatActivity implements BasePermissionTra
     private void requestLastNetworkLocation() {
         final Maybe<Location> rx;
         if (checkPermissions) {
-            rx = rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, new PermissionTransformer(this, rxLocationManager, this));
+            rx = rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, new PermissionBehavior(this, rxLocationManager, this));
         } else {
             rx = rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER);
         }
@@ -109,7 +109,7 @@ public class MainActivity extends AppCompatActivity implements BasePermissionTra
     private void requestLastNetworkOneMinuteOldLocation() {
         final Maybe<Location> rx;
         if (checkPermissions) {
-            rx = rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(1, TimeUnit.MINUTES), new PermissionTransformer(this, rxLocationManager, this));
+            rx = rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(1, TimeUnit.MINUTES), new PermissionBehavior(this, rxLocationManager, this));
         } else {
             rx = rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(1, TimeUnit.MINUTES));
         }
@@ -120,7 +120,7 @@ public class MainActivity extends AppCompatActivity implements BasePermissionTra
     private void requestLocation() {
         final Single<Location> rx;
         if (checkPermissions) {
-            rx = rxLocationManager.requestLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(15, TimeUnit.SECONDS), new PermissionTransformer(this, rxLocationManager, this));
+            rx = rxLocationManager.requestLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(15, TimeUnit.SECONDS), new PermissionBehavior(this, rxLocationManager, this));
         } else {
             rx = rxLocationManager.requestLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(15, TimeUnit.SECONDS));
         }
@@ -131,11 +131,11 @@ public class MainActivity extends AppCompatActivity implements BasePermissionTra
     private void requestBuild() {
         final Maybe<Location> rx;
         if (checkPermissions) {
-            final PermissionTransformer permissionTransformer = new PermissionTransformer(this, rxLocationManager, this);
+            final PermissionBehavior permissionBehavior = new PermissionBehavior(this, rxLocationManager, this);
 
             rx = locationRequestBuilder
-                    .addLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(30, TimeUnit.MINUTES), permissionTransformer)
-                    .addRequestLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(15, TimeUnit.SECONDS), permissionTransformer)
+                    .addLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(30, TimeUnit.MINUTES), permissionBehavior)
+                    .addRequestLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(15, TimeUnit.SECONDS), permissionBehavior)
                     .setDefaultLocation(new Location(LocationManager.PASSIVE_PROVIDER))
                     .create();
         } else {
@@ -150,11 +150,11 @@ public class MainActivity extends AppCompatActivity implements BasePermissionTra
     }
 
     private void requestBuildIgnoreSecurityError() {
-        final IgnoreErrorTransformer ignoreErrorTransformer = new IgnoreErrorTransformer(SecurityException.class);
+        final IgnoreErrorBehavior ignoreErrorBehavior = new IgnoreErrorBehavior(SecurityException.class);
 
         final Maybe<Location> maybe = locationRequestBuilder
-                .addLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(30, TimeUnit.MINUTES), ignoreErrorTransformer)
-                .addRequestLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(15, TimeUnit.SECONDS), ignoreErrorTransformer)
+                .addLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(30, TimeUnit.MINUTES), ignoreErrorBehavior)
+                .addRequestLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(15, TimeUnit.SECONDS), ignoreErrorBehavior)
                 .setDefaultLocation(new Location(LocationManager.PASSIVE_PROVIDER))
                 .create();
 

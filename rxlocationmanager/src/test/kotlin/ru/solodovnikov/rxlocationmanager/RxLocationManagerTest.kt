@@ -301,7 +301,7 @@ class RxLocationManagerTest {
                 .thenThrow(ex)
 
         defaultLocationRequestBuilder.addRequestLocation(networkProvider, LocationTime(5, TimeUnit.MILLISECONDS))
-                .addLastLocation(networkProvider, transformers = IgnoreErrorTransformer(SecurityException::class.java))
+                .addLastLocation(networkProvider, behaviors = IgnoreErrorBehavior(SecurityException::class.java))
                 .addRequestLocation(LocationManager.GPS_PROVIDER)
                 .setDefaultLocation(location)
                 .create()
@@ -330,7 +330,7 @@ class RxLocationManagerTest {
                 .thenThrow(ex)
 
         defaultLocationRequestBuilder.addRequestLocation(networkProvider, LocationTime(5, TimeUnit.MILLISECONDS))
-                .addLastLocation(networkProvider, transformers = IgnoreErrorTransformer())
+                .addLastLocation(networkProvider, behaviors = IgnoreErrorBehavior())
                 .addRequestLocation(LocationManager.GPS_PROVIDER)
                 .setDefaultLocation(location)
                 .create()
@@ -358,11 +358,11 @@ class RxLocationManagerTest {
     }
 
     /**
-     * Test [PermissionTransformer]
+     * Test [PermissionBehavior]
      */
     @Test
     fun test_PermissionTransformer() {
-        val callback: BasePermissionTransformer.PermissionCallback = mock()
+        val callback: BasePermissionBehavior.PermissionCallback = mock()
         val applicationContext: Context = mock()
 
         val location = buildFakeLocation()
@@ -372,7 +372,7 @@ class RxLocationManagerTest {
         whenever(locationManager.getLastKnownLocation(eq(networkProvider)))
                 .thenReturn(location)
 
-        defaultRxLocationManager.getLastLocation(networkProvider, transformers = PermissionTransformer(context, defaultRxLocationManager, callback))
+        defaultRxLocationManager.getLastLocation(networkProvider, behaviors = PermissionBehavior(context, defaultRxLocationManager, callback))
                 .test()
                 .awaitTerminalEvent()
                 .assertNoErrors()

@@ -9,36 +9,36 @@ import rx.Single
 import rx.Subscription
 import java.util.*
 
-interface TransformerSingle<T, R> {
-    fun transform(upstream: Single<T>): Single<R>
+interface SingleBehavior {
+    fun <T> transform(upstream: Single<T>): Single<T>
 }
 
-interface TransformerObservable<T, R> {
-    fun transform(upstream: Observable<T>): Observable<R>
+interface ObservableBehavior {
+    fun <T> transform(upstream: Observable<T>): Observable<T>
 }
 
-interface TransformerCompletable {
+interface CompletableBehavior {
     fun transform(upstream: Completable): Completable
 }
 
-interface Transformer<T, R> : TransformerSingle<T, R>, TransformerObservable<T, R>, TransformerCompletable
+interface Behavior : SingleBehavior, ObservableBehavior, CompletableBehavior
 
 /**
- * Transformer used to request runtime permissions
+ * Behavior used to request runtime permissions
  *
  * Call [RxLocationManager.onRequestPermissionsResult] inside your [android.app.Activity.onRequestPermissionsResult]
  * to get request permissions results in the transformer.
  */
-open class PermissionTransformer<T>(context: Context,
-                                    private val rxLocationManager: RxLocationManager,
-                                    callback: BasePermissionTransformer.PermissionCallback
-) : BasePermissionTransformer(context, callback), Transformer<T, T> {
+open class PermissionBehavior(context: Context,
+                              private val rxLocationManager: RxLocationManager,
+                              callback: BasePermissionBehavior.PermissionCallback
+) : BasePermissionBehavior(context, callback), Behavior {
 
 
-    override fun transform(upstream: Single<T>): Single<T> =
+    override fun <T> transform(upstream: Single<T>): Single<T> =
             checkPermissions().andThen(upstream)
 
-    override fun transform(upstream: Observable<T>): Observable<T> =
+    override fun <T> transform(upstream: Observable<T>): Observable<T> =
             checkPermissions().andThen(upstream)
 
     override fun transform(upstream: Completable): Completable =
@@ -83,15 +83,14 @@ open class PermissionTransformer<T>(context: Context,
 }
 
 /**
- * Transformer used to ignore any described error type.
+ * Behavior used to ignore any described error type.
  *
  * @param errorsToIgnore if empty, then ignore all errors, otherwise just described types.
  */
-class IgnoreErrorTransformer<T>(vararg errorsToIgnore: Class<out Throwable>
-) : Transformer<T, T> {
+class IgnoreErrorBehavior(vararg errorsToIgnore: Class<out Throwable>) : Behavior {
     private val toIgnore: Array<out Class<out Throwable>> = errorsToIgnore
 
-    override fun transform(upstream: Single<T>): Single<T> =
+    override fun <T> transform(upstream: Single<T>): Single<T> =
             upstream.onErrorResumeNext {
                 if (toIgnore.isEmpty() || toIgnore.contains(it.javaClass)) {
                     IgnorableException()
@@ -100,7 +99,7 @@ class IgnoreErrorTransformer<T>(vararg errorsToIgnore: Class<out Throwable>
                 }.let { Single.error<T>(it) }
             }
 
-    override fun transform(upstream: Observable<T>): Observable<T> =
+    override fun <T> transform(upstream: Observable<T>): Observable<T> =
             upstream.onErrorResumeNext {
                 if (toIgnore.isEmpty() || toIgnore.contains(it.javaClass)) {
                     Observable.empty<T>()

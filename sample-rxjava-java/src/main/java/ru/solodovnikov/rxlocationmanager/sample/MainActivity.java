@@ -15,16 +15,16 @@ import android.view.MenuItem;
 
 import java.util.concurrent.TimeUnit;
 
-import ru.solodovnikov.rxlocationmanager.BasePermissionTransformer;
-import ru.solodovnikov.rxlocationmanager.IgnoreErrorTransformer;
+import ru.solodovnikov.rxlocationmanager.BasePermissionBehavior;
+import ru.solodovnikov.rxlocationmanager.IgnoreErrorBehavior;
 import ru.solodovnikov.rxlocationmanager.LocationRequestBuilder;
 import ru.solodovnikov.rxlocationmanager.LocationTime;
-import ru.solodovnikov.rxlocationmanager.PermissionTransformer;
+import ru.solodovnikov.rxlocationmanager.PermissionBehavior;
 import ru.solodovnikov.rxlocationmanager.RxLocationManager;
 import rx.Single;
 import rx.functions.Action1;
 
-public class MainActivity extends AppCompatActivity implements BasePermissionTransformer.PermissionCallback {
+public class MainActivity extends AppCompatActivity implements BasePermissionBehavior.PermissionCallback {
     private static final int REQUEST_CODE_LOCATION_PERMISSIONS = 150;
 
     private RxLocationManager rxLocationManager;
@@ -96,7 +96,7 @@ public class MainActivity extends AppCompatActivity implements BasePermissionTra
     private void requestLastNetworkLocation() {
         final Single<Location> rx;
         if (checkPermissions) {
-            rx = rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, new PermissionTransformer(this, rxLocationManager, this));
+            rx = rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, new PermissionBehavior(this, rxLocationManager, this));
         } else {
             rx = rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER);
         }
@@ -106,7 +106,7 @@ public class MainActivity extends AppCompatActivity implements BasePermissionTra
     private void requestLastNetworkOneMinuteOldLocation() {
         final Single<Location> rx;
         if (checkPermissions) {
-            rx = rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(1, TimeUnit.MINUTES), new PermissionTransformer(this, rxLocationManager, this));
+            rx = rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(1, TimeUnit.MINUTES), new PermissionBehavior(this, rxLocationManager, this));
         } else {
             rx = rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(1, TimeUnit.MINUTES));
         }
@@ -117,7 +117,7 @@ public class MainActivity extends AppCompatActivity implements BasePermissionTra
     private void requestLocation() {
         final Single<Location> rx;
         if (checkPermissions) {
-            rx = rxLocationManager.requestLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(15, TimeUnit.SECONDS), new PermissionTransformer(this, rxLocationManager, this));
+            rx = rxLocationManager.requestLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(15, TimeUnit.SECONDS), new PermissionBehavior(this, rxLocationManager, this));
         } else {
             rx = rxLocationManager.requestLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(15, TimeUnit.SECONDS));
         }
@@ -127,7 +127,7 @@ public class MainActivity extends AppCompatActivity implements BasePermissionTra
     private void requestBuild() {
         final Single<Location> rx;
         if (checkPermissions) {
-            final PermissionTransformer permissionTransformer = new PermissionTransformer(this, rxLocationManager, this);
+            final PermissionBehavior permissionTransformer = new PermissionBehavior(this, rxLocationManager, this);
 
             rx = locationRequestBuilder
                     .addLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(30, TimeUnit.MINUTES), permissionTransformer)
@@ -146,7 +146,7 @@ public class MainActivity extends AppCompatActivity implements BasePermissionTra
     }
 
     private void requestBuildIgnoreSecurityError() {
-        final IgnoreErrorTransformer ignoreErrorTransformer = new IgnoreErrorTransformer(SecurityException.class);
+        final IgnoreErrorBehavior ignoreErrorTransformer = new IgnoreErrorBehavior(SecurityException.class);
 
         final Single<Location> single = locationRequestBuilder
                 .addLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(30, TimeUnit.MINUTES), ignoreErrorTransformer)
