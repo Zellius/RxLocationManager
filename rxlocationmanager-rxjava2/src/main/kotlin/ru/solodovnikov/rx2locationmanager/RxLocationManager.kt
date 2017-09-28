@@ -160,6 +160,15 @@ class RxLocationManager internal constructor(context: Context,
                     .onErrorComplete { it is NullEmittedException }
                     .applyBehaviors(behaviors)
 
+    /**
+     * Returns the current enabled/disabled status of the given provider.
+     *
+     * @see LocationManager.isProviderEnabled
+     */
+    fun isProviderEnabled(provider: String, vararg behaviors: SingleBehavior): Single<Boolean> =
+            Single.fromCallable { locationManager.isProviderEnabled(provider) }
+                    .applyBehaviors(behaviors)
+
     override fun onRequestPermissionsResult(permissions: Array<out String>, grantResults: IntArray) {
         permissionSubject.onNext(Pair(permissions, grantResults))
     }

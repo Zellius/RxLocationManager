@@ -1,8 +1,19 @@
 package ru.solodovnikov.rx2locationmanager
 
+import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.location.LocationProvider
 import android.os.Build
+import android.provider.Settings
+import android.support.v4.app.Fragment
+import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.CommonStatusCodes
+import com.google.android.gms.common.api.ResolvableApiException
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.LocationSettingsRequest
 import io.reactivex.Completable
 import io.reactivex.Maybe
 import io.reactivex.Observable
@@ -132,4 +143,162 @@ class IgnoreErrorBehavior(vararg errorsToIgnore: Class<out Throwable>) : Behavio
                     Completable.error(it)
                 }
             }
+}
+
+class EnableLocationBehavior(private val resolver: Resolver) : Behavior {
+    override fun <T> transform(upstream: Single<T>): Single<T> =
+            resolver.create().andThen(upstream)
+
+    override fun <T> transform(upstream: Maybe<T>): Maybe<T> =
+            resolver.create().andThen(upstream)
+
+    override fun <T> transform(upstream: Observable<T>): Observable<T> =
+            resolver.create().andThen(upstream)
+
+    override fun transform(upstream: Completable): Completable =
+            resolver.create().andThen(upstream)
+
+    companion object {
+        @JvmStatic
+        fun createActivityBehavior(context: Context,
+                                   requestCode: Int,
+                                   activityProvider: (() -> Activity)?,
+                                   provider: String,
+                                   rxLocationManager: RxLocationManager) =
+                create(context, requestCode, activityProvider, null, provider, rxLocationManager)
+
+        @JvmStatic
+        fun createFragmentBehavior(context: Context,
+                                   requestCode: Int,
+                                   fragmentProvider: (() -> Fragment)?,
+                                   provider: String,
+                                   rxLocationManager: RxLocationManager) =
+                create(context, requestCode, null, fragmentProvider, provider, rxLocationManager)
+
+        @JvmStatic
+        private fun create(context: Context,
+                           requestCode: Int,
+                           activityProvider: (() -> Activity)?,
+                           fragmentProvider: (() -> Fragment)?,
+                           provider: String,
+                           rxLocationManager: RxLocationManager): EnableLocationBehavior =
+                if (try {
+                    Class.forName("com.google.android.gms.location.LocationServices") != null
+                } catch (e: Exception) {
+                    false
+                }) {
+                    GoogleResolver(context, requestCode, activityProvider, fragmentProvider, provider, rxLocationManager)
+                } else {
+                    SettingsResoler(requestCode, activityProvider, fragmentProvider, provider, rxLocationManager)
+                }.let { EnableLocationBehavior(it) }
+    }
+
+    abstract class Resolver(protected val rxLocationManager: RxLocationManager,
+                            private val provider: String) {
+        abstract internal fun create(): Completable
+
+        internal fun checkProvider() =
+                rxLocationManager.getProvider(provider)
+                        .switchIfEmpty { Maybe.error<LocationProvider>(ProviderNotAvailableException(provider)) }
+                        .flatMapSingle { rxLocationManager.isProviderEnabled(it.name) }
+    }
+
+    class SettingsResoler internal constructor(private val requestCode: Int,
+                                               private val activityProvider: (() -> Activity)?,
+                                               private val fragmentProvider: (() -> Fragment)?,
+                                               provider: String,
+                                               rxLocationManager: RxLocationManager) : Resolver(rxLocationManager, provider) {
+        override fun create(): Completable =
+                checkProvider().flatMapCompletable { isProviderEnabled ->
+                    Completable.create { emitter ->
+                        if (!isProviderEnabled) {
+                            Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS).also {
+                                when {
+                                    activityProvider != null ->
+                                        activityProvider.invoke().startActivityForResult(it, requestCode)
+                                    fragmentProvider != null ->
+                                        fragmentProvider.invoke().startActivityForResult(it, requestCode)
+                                    else ->
+                                        emitter.onError(IllegalArgumentException(
+                                                "ActivityProvider and FragmentProvider cannot be null"))
+                                }
+                            }
+                        } else {
+                            emitter.onComplete()
+                        }
+                    }
+                }
+
+        companion object {
+            @JvmStatic
+            fun getActivityResolver(requestCode: Int,
+                                    activityProvider: () -> Activity,
+                                    provider: String,
+                                    rxLocationManager: RxLocationManager) =
+                    SettingsResoler(requestCode, activityProvider, null, provider, rxLocationManager)
+
+            @JvmStatic
+            fun getFragmentResolver(requestCode: Int,
+                                    fragmentProvider: () -> Fragment,
+                                    provider: String,
+                                    rxLocationManager: RxLocationManager) =
+                    SettingsResoler(requestCode, null, fragmentProvider, provider, rxLocationManager)
+        }
+    }
+
+    class GoogleResolver internal constructor(context: Context,
+                                              private val requestCode: Int,
+                                              private val activityProvider: (() -> Activity)?,
+                                              private val fragmentProvider: (() -> Fragment)?,
+                                              provider: String,
+                                              rxLocationManager: RxLocationManager) : Resolver(rxLocationManager, provider) {
+        private val context = context.applicationContext
+
+        override fun create(): Completable =
+                Completable.create { emitter ->
+                    LocationServices.getSettingsClient(context)
+                            .checkLocationSettings(LocationSettingsRequest.Builder()
+                                    .addLocationRequest(LocationRequest.create()).build())
+                            .addOnFailureListener {
+                                val apiException = it as? ApiException ?: throw it
+                                when (apiException.statusCode) {
+                                    CommonStatusCodes.RESOLUTION_REQUIRED -> {
+                                        val e = it as? ResolvableApiException ?: throw it
+                                        when {
+                                            activityProvider != null ->
+                                                e.startResolutionForResult(activityProvider.invoke(), requestCode)
+                                            fragmentProvider != null ->
+                                                fragmentProvider.invoke()
+                                                        .startIntentSenderForResult(e.resolution.intentSender,
+                                                                requestCode, null, 0, 0, 0, null)
+                                            else ->
+                                                emitter.onError(IllegalArgumentException(
+                                                        "ActivityProvider and FragmentProvider cannot be null"))
+                                        }
+                                    }
+                                    else -> {
+                                        emitter.onError(it)
+                                    }
+                                }
+                            }.addOnSuccessListener { emitter.onComplete() }
+                }
+
+        companion object {
+            @JvmStatic
+            fun getActivityResolver(context: Context,
+                                    requestCode: Int,
+                                    activityProvider: () -> Activity,
+                                    provider: String,
+                                    rxLocationManager: RxLocationManager) =
+                    GoogleResolver(context, requestCode, activityProvider, null, provider, rxLocationManager)
+
+            @JvmStatic
+            fun getFragmentResolver(context: Context,
+                                    requestCode: Int,
+                                    fragmentProvider: () -> Fragment,
+                                    provider: String,
+                                    rxLocationManager: RxLocationManager) =
+                    GoogleResolver(context, requestCode, null, fragmentProvider, provider, rxLocationManager)
+        }
+    }
 }
