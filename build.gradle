@@ -1,6 +1,6 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 buildscript {
-    ext.kotlin_version = '1.1.50'
+    ext.kotlin_version = '1.1.51'
 
     repositories {
         jcenter()
@@ -30,7 +30,7 @@ allprojects {
 }
 
 //copy core classes to the project gen folder
-def includeCoreClasses = { Project p ->
+def includeCoreClasses = { org.apache.tools.ant.Project p ->
     p.android.libraryVariants.all { variant ->
         def outputDir = p.file("$p.buildDir/generated/core/${variant.dirName}")
         def packageName = variant.generateBuildConfig.appPackageName

@@ -47,7 +47,7 @@ class RxLocationManager internal constructor(context: Context,
                         } else {
                             it
                         }
-                    }.applyBehaviors(behaviors)
+                    }.applyBehaviors(behaviors, BehaviorParams(provider))
                     .compose(this::applySchedulers)
 
     /**
@@ -92,7 +92,7 @@ class RxLocationManager internal constructor(context: Context,
                     it.onError(ProviderDisabledException(provider))
                 }
             }).compose { if (timeOut != null) it.timeout(timeOut.time, timeOut.timeUnit) else it }
-                    .applyBehaviors(behaviors)
+                    .applyBehaviors(behaviors, BehaviorParams(provider))
                     .compose(this::applySchedulers)
 
     /**
@@ -131,7 +131,7 @@ class RxLocationManager internal constructor(context: Context,
                 } else {
                     it.onError(ProviderDisabledException(provider))
                 }
-            }).applyBehaviors(behaviors).compose(this::applySchedulers)
+            }).applyBehaviors(behaviors, BehaviorParams(provider)).compose(this::applySchedulers)
 
     /**
      * Returns a list of the names of all known location providers.
@@ -158,7 +158,7 @@ class RxLocationManager internal constructor(context: Context,
     fun getProvider(name: String, vararg behaviors: MaybeBehavior) =
             Maybe.fromCallable { locationManager.getProvider(name) ?: throw NullEmittedException() }
                     .onErrorComplete { it is NullEmittedException }
-                    .applyBehaviors(behaviors)
+                    .applyBehaviors(behaviors, BehaviorParams())
 
     /**
      * Returns the current enabled/disabled status of the given provider.
@@ -167,7 +167,7 @@ class RxLocationManager internal constructor(context: Context,
      */
     fun isProviderEnabled(provider: String, vararg behaviors: SingleBehavior): Single<Boolean> =
             Single.fromCallable { locationManager.isProviderEnabled(provider) }
-                    .applyBehaviors(behaviors)
+                    .applyBehaviors(behaviors, BehaviorParams(provider))
 
     override fun onRequestPermissionsResult(permissions: Array<out String>, grantResults: IntArray) {
         permissionSubject.onNext(Pair(permissions, grantResults))
@@ -176,14 +176,14 @@ class RxLocationManager internal constructor(context: Context,
     internal fun subscribeToPermissionUpdate(onUpdate: (Pair<Array<out String>, IntArray>) -> Unit)
             = permissionSubject.subscribe(onUpdate, {}, {})
 
-    private fun <T> Single<T>.applyBehaviors(behaviors: Array<out SingleBehavior>) =
-            let { behaviors.fold(it, { acc, transformer -> transformer.transform(acc) }) }
+    private fun <T> Single<T>.applyBehaviors(behaviors: Array<out SingleBehavior>, params: BehaviorParams) =
+            let { behaviors.fold(it, { acc, transformer -> transformer.transform(acc, params) }) }
 
-    private fun <T> Maybe<T>.applyBehaviors(behaviors: Array<out MaybeBehavior>) =
-            let { behaviors.fold(it, { acc, transformer -> transformer.transform(acc) }) }
+    private fun <T> Maybe<T>.applyBehaviors(behaviors: Array<out MaybeBehavior>, params: BehaviorParams) =
+            let { behaviors.fold(it, { acc, transformer -> transformer.transform(acc, params) }) }
 
-    private fun <T> Observable<T>.applyBehaviors(behaviors: Array<out ObservableBehavior>) =
-            let { behaviors.fold(it, { acc, transformer -> transformer.transform(acc) }) }
+    private fun <T> Observable<T>.applyBehaviors(behaviors: Array<out ObservableBehavior>, params: BehaviorParams) =
+            let { behaviors.fold(it, { acc, transformer -> transformer.transform(acc, params) }) }
 
     private fun applySchedulers(s: Single<Location>) = s.subscribeOn(scheduler)
 
