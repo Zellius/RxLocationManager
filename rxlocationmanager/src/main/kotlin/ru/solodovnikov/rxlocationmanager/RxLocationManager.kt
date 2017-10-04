@@ -1,6 +1,7 @@
 package ru.solodovnikov.rxlocationmanager
 
 import android.content.Context
+import android.content.Intent
 import android.location.Criteria
 import android.location.Location
 import android.location.LocationListener
@@ -174,6 +175,10 @@ class RxLocationManager internal constructor(context: Context,
 
     override fun onRequestPermissionsResult(permissions: Array<out String>, grantResults: IntArray) {
         permissionSubject.onNext(Pair(permissions, grantResults))
+    }
+
+    override fun onActivityResult(resultCode: Int, data: Intent?) {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
     internal fun subscribeToPermissionUpdate(onUpdate: (Pair<Array<out String>, IntArray>) -> Unit)

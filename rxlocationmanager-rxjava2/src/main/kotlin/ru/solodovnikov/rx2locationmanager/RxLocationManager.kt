@@ -1,6 +1,8 @@
 package ru.solodovnikov.rx2locationmanager
 
+import android.app.Instrumentation
 import android.content.Context
+import android.content.Intent
 import android.location.Criteria
 import android.location.Location
 import android.location.LocationListener
@@ -20,6 +22,7 @@ class RxLocationManager internal constructor(context: Context,
     constructor(context: Context) : this(context, AndroidSchedulers.mainThread())
 
     private val permissionSubject by lazy { PublishSubject.create<Pair<Array<out String>, IntArray>>() }
+    private val resultSubject by lazy { PublishSubject.create<Instrumentation.ActivityResult>() }
 
     /**
      * Get last location from specific provider
@@ -173,8 +176,15 @@ class RxLocationManager internal constructor(context: Context,
         permissionSubject.onNext(Pair(permissions, grantResults))
     }
 
+    override fun onActivityResult(resultCode: Int, data: Intent?) {
+        resultSubject.onNext(Instrumentation.ActivityResult(resultCode, data))
+    }
+
     internal fun subscribeToPermissionUpdate(onUpdate: (Pair<Array<out String>, IntArray>) -> Unit)
             = permissionSubject.subscribe(onUpdate, {}, {})
+
+    internal fun subscribeToActivityResultUpdate(onUpdate: (Instrumentation.ActivityResult) -> Unit)
+            = resultSubject.subscribe(onUpdate, {}, {})
 
     private fun <T> Single<T>.applyBehaviors(behaviors: Array<out SingleBehavior>, params: BehaviorParams) =
             let { behaviors.fold(it, { acc, transformer -> transformer.transform(acc, params) }) }

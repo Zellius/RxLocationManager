@@ -218,9 +218,17 @@ class EnableLocationBehavior(private val resolver: Resolver) : Behavior {
                                                 private val fragmentProvider: (() -> FragmentSys)?,
                                                 rxLocationManager: RxLocationManager) : Resolver(rxLocationManager) {
         override fun create(provider: String): Completable =
-                checkProvider(provider).flatMapCompletable { isProviderEnabled ->
-                    Completable.create { emitter ->
+                checkProvider(provider).flatMap { isProviderEnabled ->
+                    Single.create<Boolean> { emitter ->
                         if (!isProviderEnabled) {
+                            rxLocationManager.subscribeToActivityResultUpdate {
+                                if (it.resultCode == Activity.RESULT_CANCELED) {
+                                    emitter.onSuccess(true)
+                                } else {
+                                    emitter.onError(IllegalStateException("Unknown result"))
+                                }
+                            }.apply { emitter.setCancellable { dispose() } }
+
                             Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS).also {
                                 when {
                                     activityProvider != null ->
@@ -231,7 +239,7 @@ class EnableLocationBehavior(private val resolver: Resolver) : Behavior {
                                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
                                             fragmentProvider.invoke().startActivityForResult(it, requestCode)
                                         } else {
-                                            emitter.onError(IllegalStateException("Build version is < 11"))
+                                            emitter.onError(IllegalStateException("Build version is < ${Build.VERSION_CODES.HONEYCOMB}"))
                                         }
                                     else ->
                                         emitter.onError(IllegalArgumentException(
@@ -239,8 +247,20 @@ class EnableLocationBehavior(private val resolver: Resolver) : Behavior {
                                 }
                             }
                         } else {
-                            emitter.onComplete()
+                            emitter.onSuccess(false)
                         }
+                    }
+                }.flatMapCompletable {
+                    if (it) {
+                        checkProvider(provider).flatMapCompletable {
+                            if (it) {
+                                Completable.complete()
+                            } else {
+                                Completable.error(RuntimeException())
+                            }
+                        }
+                    } else {
+                        Completable.complete()
                     }
                 }
 
@@ -282,6 +302,8 @@ class EnableLocationBehavior(private val resolver: Resolver) : Behavior {
                                 val apiException = it as? ApiException ?: throw it
                                 when (apiException.statusCode) {
                                     CommonStatusCodes.RESOLUTION_REQUIRED -> {
+                                        rxLocationManager.subscribeToActivityResultUpdate { }
+                                                .apply { emitter.setCancellable { dispose() } }
                                         val e = it as? ResolvableApiException ?: throw it
                                         when {
                                             activityProvider != null ->

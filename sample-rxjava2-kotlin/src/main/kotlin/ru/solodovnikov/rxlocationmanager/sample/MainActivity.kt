@@ -1,5 +1,6 @@
 package ru.solodovnikov.rxlocationmanager.sample
 
+import android.content.Intent
 import android.location.Location
 import android.location.LocationManager
 import android.os.Bundle
@@ -67,6 +68,13 @@ class MainActivity : AppCompatActivity(), BasePermissionBehavior.PermissionCallb
         }
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_CODE_LOCATION_SETTINGS) {
+            rxLocationManager.onActivityResult(resultCode, data)
+        }
+    }
+
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQUEST_CODE_LOCATION_PERMISSIONS) {
@@ -80,7 +88,7 @@ class MainActivity : AppCompatActivity(), BasePermissionBehavior.PermissionCallb
 
     private fun requestLastNetworkLocation() {
         if (checkPermissions) {
-            rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, behaviors = PermissionBehavior(this, rxLocationManager, this))
+            rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, behaviors = *arrayOf(EnableLocationBehavior.createActivityBehavior(this, REQUEST_CODE_LOCATION_SETTINGS, { this }, rxLocationManager), PermissionBehavior(this, rxLocationManager, this)))
         } else {
             rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER)
         }.testSubscribe("requestLastNetworkLocation")
@@ -156,5 +164,6 @@ class MainActivity : AppCompatActivity(), BasePermissionBehavior.PermissionCallb
 
     companion object {
         private const val REQUEST_CODE_LOCATION_PERMISSIONS = 150
+        private const val REQUEST_CODE_LOCATION_SETTINGS = 151
     }
 }

@@ -30,7 +30,7 @@ allprojects {
 }
 
 //copy core classes to the project gen folder
-def includeCoreClasses = { org.apache.tools.ant.Project p ->
+def includeCoreClasses = { Project p ->
     p.android.libraryVariants.all { variant ->
         def outputDir = p.file("$p.buildDir/generated/core/${variant.dirName}")
         def packageName = variant.generateBuildConfig.appPackageName
@@ -137,7 +137,7 @@ def prepareSample(Project p) {
         compile fileTree(include: ['*.jar'], dir: 'libs')
         compile 'com.android.support:appcompat-v7:26.0.2'
         compile 'com.android.support:design:26.0.2'
-        compile 'com.google.android.gms:play-services-location:11.4.0'
+        //compile 'com.google.android.gms:play-services-location:11.4.0'
 
         if (isKotlinSample) {
             compile "org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version"

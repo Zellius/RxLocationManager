@@ -1,6 +1,7 @@
 package ru.solodovnikov.rxlocationmanager
 
 import android.content.Context
+import android.content.Intent
 import android.location.Location
 import android.location.LocationManager
 import android.os.Build
@@ -14,6 +15,8 @@ abstract class BaseRxLocationManager(context: Context) {
      * @see android.app.Activity.onRequestPermissionsResult
      */
     abstract fun onRequestPermissionsResult(permissions: Array<out String>, grantResults: IntArray)
+
+    abstract fun onActivityResult(resultCode: Int, data: Intent?)
 
     /**
      * Check is location not old
