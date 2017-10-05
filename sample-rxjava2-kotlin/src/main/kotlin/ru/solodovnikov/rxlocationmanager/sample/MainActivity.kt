@@ -15,7 +15,7 @@ import io.reactivex.Single
 import ru.solodovnikov.rx2locationmanager.*
 import java.util.concurrent.TimeUnit
 
-class MainActivity : AppCompatActivity(), BasePermissionBehavior.PermissionCallback {
+class MainActivity : AppCompatActivity(), BasePermissionBehavior.PermissionCallback, ForResultCaller {
     private val rxLocationManager: RxLocationManager by lazy { RxLocationManager(this) }
     private val locationRequestBuilder: LocationRequestBuilder by lazy { LocationRequestBuilder(rxLocationManager) }
 
@@ -88,7 +88,7 @@ class MainActivity : AppCompatActivity(), BasePermissionBehavior.PermissionCallb
 
     private fun requestLastNetworkLocation() {
         if (checkPermissions) {
-            rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, behaviors = *arrayOf(EnableLocationBehavior.createActivityBehavior(this, REQUEST_CODE_LOCATION_SETTINGS, { this }, rxLocationManager), PermissionBehavior(this, rxLocationManager, this)))
+            rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, behaviors = *arrayOf(EnableLocationBehavior.create(this, REQUEST_CODE_LOCATION_SETTINGS, { this }, rxLocationManager), PermissionBehavior(this, rxLocationManager, this)))
         } else {
             rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER)
         }.testSubscribe("requestLastNetworkLocation")

@@ -18,6 +18,11 @@ class ElderLocationException(val location: Location) : Throwable("The location i
 class ProviderNotAvailableException(provider: String) : Throwable("There is no such provider: $provider")
 
 /**
+ * Throws when location is disabled
+ */
+class LocationDisabledException() : Throwable("Location is disabled on the device")
+
+/**
  * Throws when null emitted
  */
 internal class NullEmittedException : Throwable()
