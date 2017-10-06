@@ -1,8 +1,19 @@
 package ru.solodovnikov.rxlocationmanager
 
+import android.app.Activity
+import android.app.Instrumentation
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.provider.Settings
+import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.CommonStatusCodes
+import com.google.android.gms.common.api.ResolvableApiException
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.LocationSettingsRequest
+import com.google.android.gms.location.LocationSettingsStates
 import rx.Completable
 import rx.Observable
 import rx.Single
@@ -10,15 +21,15 @@ import rx.Subscription
 import java.util.*
 
 interface SingleBehavior {
-    fun <T> transform(upstream: Single<T>): Single<T>
+    fun <T> transform(upstream: Single<T>, params: BehaviorParams): Single<T>
 }
 
 interface ObservableBehavior {
-    fun <T> transform(upstream: Observable<T>): Observable<T>
+    fun <T> transform(upstream: Observable<T>, params: BehaviorParams): Observable<T>
 }
 
 interface CompletableBehavior {
-    fun transform(upstream: Completable): Completable
+    fun transform(upstream: Completable, params: BehaviorParams): Completable
 }
 
 interface Behavior : SingleBehavior, ObservableBehavior, CompletableBehavior
@@ -31,17 +42,17 @@ interface Behavior : SingleBehavior, ObservableBehavior, CompletableBehavior
  */
 open class PermissionBehavior(context: Context,
                               private val rxLocationManager: RxLocationManager,
-                              callback: BasePermissionBehavior.PermissionCallback
-) : BasePermissionBehavior(context, callback), Behavior {
+                              caller: PermissionCaller
+) : BasePermissionBehavior(context, caller), Behavior {
 
 
-    override fun <T> transform(upstream: Single<T>): Single<T> =
+    override fun <T> transform(upstream: Single<T>, params: BehaviorParams): Single<T> =
             checkPermissions().andThen(upstream)
 
-    override fun <T> transform(upstream: Observable<T>): Observable<T> =
+    override fun <T> transform(upstream: Observable<T>, params: BehaviorParams): Observable<T> =
             checkPermissions().andThen(upstream)
 
-    override fun transform(upstream: Completable): Completable =
+    override fun transform(upstream: Completable, params: BehaviorParams): Completable =
             checkPermissions().andThen(upstream)
 
     /**
@@ -66,7 +77,7 @@ open class PermissionBehavior(context: Context,
                             }
                         }.apply { emitter.setCancellation { unsubscribe() } }
 
-                        callback.requestPermissions(deniedPermissions)
+                        caller.requestPermissions(deniedPermissions)
                     } else {
                         emitter.onCompleted()
                     }
@@ -90,7 +101,7 @@ open class PermissionBehavior(context: Context,
 class IgnoreErrorBehavior(vararg errorsToIgnore: Class<out Throwable>) : Behavior {
     private val toIgnore: Array<out Class<out Throwable>> = errorsToIgnore
 
-    override fun <T> transform(upstream: Single<T>): Single<T> =
+    override fun <T> transform(upstream: Single<T>, params: BehaviorParams): Single<T> =
             upstream.onErrorResumeNext {
                 if (toIgnore.isEmpty() || toIgnore.contains(it.javaClass)) {
                     IgnorableException()
@@ -99,7 +110,7 @@ class IgnoreErrorBehavior(vararg errorsToIgnore: Class<out Throwable>) : Behavio
                 }.let { Single.error<T>(it) }
             }
 
-    override fun <T> transform(upstream: Observable<T>): Observable<T> =
+    override fun <T> transform(upstream: Observable<T>, params: BehaviorParams): Observable<T> =
             upstream.onErrorResumeNext {
                 if (toIgnore.isEmpty() || toIgnore.contains(it.javaClass)) {
                     Observable.empty<T>()
@@ -108,7 +119,7 @@ class IgnoreErrorBehavior(vararg errorsToIgnore: Class<out Throwable>) : Behavio
                 }
             }
 
-    override fun transform(upstream: Completable): Completable =
+    override fun transform(upstream: Completable, params: BehaviorParams): Completable =
             upstream.onErrorResumeNext {
                 if (toIgnore.isEmpty() || toIgnore.contains(it.javaClass)) {
                     Completable.complete()
@@ -116,4 +127,125 @@ class IgnoreErrorBehavior(vararg errorsToIgnore: Class<out Throwable>) : Behavio
                     Completable.error(it)
                 }
             }
+}
+
+class EnableLocationBehavior(private val resolver: Resolver) : Behavior {
+    override fun <T> transform(upstream: Single<T>, params: BehaviorParams): Single<T> =
+            resolver.create(params.provider!!).andThen(upstream)
+
+    override fun <T> transform(upstream: Observable<T>, params: BehaviorParams): Observable<T> =
+            resolver.create(params.provider!!).andThen(upstream)
+
+    override fun transform(upstream: Completable, params: BehaviorParams): Completable =
+            resolver.create(params.provider!!).andThen(upstream)
+
+    companion object {
+        @JvmStatic
+        fun create(context: Context,
+                   requestCode: Int,
+                   callerProvider: () -> ForResultCaller,
+                   rxLocationManager: RxLocationManager): EnableLocationBehavior =
+                if (try {
+                    Class.forName("com.google.android.gms.location.LocationServices") != null
+                } catch (e: Exception) {
+                    false
+                }) {
+                    GoogleResolver(context, requestCode, callerProvider, rxLocationManager)
+                } else {
+                    SettingsResolver(requestCode, callerProvider, rxLocationManager)
+                }.let { EnableLocationBehavior(it) }
+    }
+
+    abstract class Resolver(private val rxLocationManager: RxLocationManager) {
+        abstract fun create(provider: String): Completable
+
+        protected fun checkProvider(provider: String): Single<Boolean> =
+                rxLocationManager.getProvider(provider)
+                        .flatMap {
+                            if (it == null) {
+                                Single.error<Boolean>(ProviderNotAvailableException(provider))
+                            } else {
+                                rxLocationManager.isProviderEnabled(it.name)
+                            }
+                        }
+
+        protected fun subscribeToActivityResultUpdate(f: (Instrumentation.ActivityResult) -> Unit): Subscription =
+                rxLocationManager.subscribeToActivityResultUpdate(f)
+    }
+
+    class SettingsResolver(private val requestCode: Int,
+                           private val callerProvider: () -> ForResultCaller,
+                           rxLocationManager: RxLocationManager) : Resolver(rxLocationManager) {
+        override fun create(provider: String): Completable =
+                checkProvider(provider).flatMap { isProviderEnabled ->
+                    Single.fromEmitter<Boolean> { emitter ->
+                        if (!isProviderEnabled) {
+                            subscribeToActivityResultUpdate {
+                                if (it.resultCode == Activity.RESULT_CANCELED) {
+                                    emitter.onSuccess(true)
+                                } else {
+                                    emitter.onError(IllegalStateException("Unknown result"))
+                                }
+                            }.apply { emitter.setCancellation { unsubscribe() } }
+
+                            callerProvider().startActivityForResult(
+                                    Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS), requestCode)
+                        } else {
+                            emitter.onSuccess(false)
+                        }
+                    }
+                }.flatMapCompletable {
+                    if (it) {
+                        checkProvider(provider).flatMapCompletable {
+                            if (it) {
+                                Completable.complete()
+                            } else {
+                                Completable.error(LocationDisabledException())
+                            }
+                        }
+                    } else {
+                        Completable.complete()
+                    }
+                }
+    }
+
+    class GoogleResolver(context: Context,
+                         private val requestCode: Int,
+                         private val callerProvider: () -> ForResultCaller,
+                         rxLocationManager: RxLocationManager) : Resolver(rxLocationManager) {
+        private val context = context.applicationContext
+
+        override fun create(provider: String): Completable =
+                Completable.fromEmitter { emitter ->
+                    LocationServices.getSettingsClient(context)
+                            .checkLocationSettings(LocationSettingsRequest.Builder()
+                                    .addLocationRequest(LocationRequest.create()).build())
+                            .addOnFailureListener {
+                                (it as? ApiException ?: throw it).also {
+                                    when (it.statusCode) {
+                                        CommonStatusCodes.RESOLUTION_REQUIRED -> {
+                                            subscribeToActivityResultUpdate {
+                                                LocationSettingsStates.fromIntent(it.resultData)
+                                                        .isNetworkLocationUsable.also {
+                                                    if (it) {
+                                                        emitter.onCompleted()
+                                                    } else {
+                                                        emitter.onError(LocationDisabledException())
+                                                    }
+                                                }
+                                            }.apply { emitter.setCancellation { unsubscribe() } }
+
+                                            (it as? ResolvableApiException ?: throw it).also { e ->
+                                                callerProvider().startIntentSenderForResult(e.resolution.intentSender,
+                                                        requestCode, null, 0, 0, 0, null)
+                                            }
+                                        }
+                                        else -> {
+                                            emitter.onError(it)
+                                        }
+                                    }
+                                }
+                            }.addOnSuccessListener { emitter.onCompleted() }
+                }
+    }
 }

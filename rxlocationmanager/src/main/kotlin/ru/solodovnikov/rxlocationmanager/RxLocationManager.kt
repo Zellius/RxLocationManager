@@ -1,5 +1,6 @@
 package ru.solodovnikov.rxlocationmanager
 
+import android.app.Instrumentation
 import android.content.Context
 import android.content.Intent
 import android.location.Criteria
@@ -25,6 +26,7 @@ class RxLocationManager internal constructor(context: Context,
     constructor(context: Context) : this(context, AndroidSchedulers.mainThread())
 
     private val permissionSubject by lazy { PublishSubject.create<Pair<Array<out String>, IntArray>>() }
+    private val resultSubject by lazy { PublishSubject.create<Instrumentation.ActivityResult>() }
 
     /**
      * Get last location from specific provider
@@ -51,7 +53,7 @@ class RxLocationManager internal constructor(context: Context,
                         } else {
                             it
                         }
-                    }.applyBehaviors(behaviors)
+                    }.applyBehaviors(behaviors, BehaviorParams(provider))
                     .compose(this::applySchedulers)
 
     /**
@@ -101,7 +103,7 @@ class RxLocationManager internal constructor(context: Context,
             }, Emitter.BackpressureMode.NONE)
                     .toSingle()
                     .compose { if (timeOut != null) it.timeout(timeOut.time, timeOut.timeUnit) else it }
-                    .applyBehaviors(behaviors)
+                    .applyBehaviors(behaviors, BehaviorParams(provider))
                     .compose(this::applySchedulers)
 
     /**
@@ -144,7 +146,7 @@ class RxLocationManager internal constructor(context: Context,
                     it.onError(ProviderDisabledException(provider))
                 }
             }, Emitter.BackpressureMode.NONE)
-                    .applyBehaviors(behaviors)
+                    .applyBehaviors(behaviors, BehaviorParams(provider))
                     .compose(this::applySchedulers)
 
     /**
@@ -171,28 +173,40 @@ class RxLocationManager internal constructor(context: Context,
      */
     fun getProvider(name: String, vararg behaviors: SingleBehavior) =
             Single.fromCallable { locationManager.getProvider(name) }
-                    .applyBehaviors(behaviors)
+                    .applyBehaviors(behaviors, BehaviorParams(name))
+
+    /**
+     * Returns the current enabled/disabled status of the given provider.
+     *
+     * @see LocationManager.isProviderEnabled
+     */
+    fun isProviderEnabled(provider: String, vararg behaviors: SingleBehavior): Single<Boolean> =
+            Single.fromCallable { locationManager.isProviderEnabled(provider) }
+                    .applyBehaviors(behaviors, BehaviorParams(provider))
 
     override fun onRequestPermissionsResult(permissions: Array<out String>, grantResults: IntArray) {
         permissionSubject.onNext(Pair(permissions, grantResults))
     }
 
     override fun onActivityResult(resultCode: Int, data: Intent?) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        resultSubject.onNext(Instrumentation.ActivityResult(resultCode, data))
     }
 
     internal fun subscribeToPermissionUpdate(onUpdate: (Pair<Array<out String>, IntArray>) -> Unit)
             = permissionSubject.subscribe(onUpdate, {}, {})
 
+    internal fun subscribeToActivityResultUpdate(onUpdate: (Instrumentation.ActivityResult) -> Unit)
+            = resultSubject.subscribe(onUpdate, {}, {})
+
     private fun applySchedulers(s: Single<Location>) = s.subscribeOn(scheduler)
 
     private fun applySchedulers(s: Observable<Location>) = s.subscribeOn(scheduler)
 
-    private fun <T> Single<T>.applyBehaviors(behaviors: Array<out SingleBehavior>) =
-            let { behaviors.fold(it, { acc, transformer -> transformer.transform(acc) }) }
+    private fun <T> Single<T>.applyBehaviors(behaviors: Array<out SingleBehavior>, params: BehaviorParams) =
+            let { behaviors.fold(it, { acc, transformer -> transformer.transform(acc, params) }) }
 
-    private fun <T> Observable<T>.applyBehaviors(behaviors: Array<out ObservableBehavior>) =
-            let { behaviors.fold(it, { acc, transformer -> transformer.transform(acc) }) }
+    private fun <T> Observable<T>.applyBehaviors(behaviors: Array<out ObservableBehavior>, params: BehaviorParams) =
+            let { behaviors.fold(it, { acc, transformer -> transformer.transform(acc, params) }) }
 }
 
 

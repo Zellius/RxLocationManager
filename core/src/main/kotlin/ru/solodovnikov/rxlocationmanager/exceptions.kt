@@ -20,7 +20,7 @@ class ProviderNotAvailableException(provider: String) : Throwable("There is no s
 /**
  * Throws when location is disabled
  */
-class LocationDisabledException() : Throwable("Location is disabled on the device")
+class LocationDisabledException : Throwable("Location is disabled on the device")
 
 /**
  * Throws when null emitted

@@ -362,7 +362,7 @@ class RxLocationManagerTest {
      */
     @Test
     fun test_PermissionTransformer() {
-        val callback: BasePermissionBehavior.PermissionCallback = mock()
+        val caller: PermissionCaller = mock()
         val applicationContext: Context = mock()
 
         val location = buildFakeLocation()
@@ -372,14 +372,14 @@ class RxLocationManagerTest {
         whenever(locationManager.getLastKnownLocation(eq(networkProvider)))
                 .thenReturn(location)
 
-        defaultRxLocationManager.getLastLocation(networkProvider, behaviors = PermissionBehavior(context, defaultRxLocationManager, callback))
+        defaultRxLocationManager.getLastLocation(networkProvider, behaviors = PermissionBehavior(context, defaultRxLocationManager, caller))
                 .test()
                 .awaitTerminalEvent()
                 .assertNoErrors()
                 .assertCompleted()
                 .assertValue(location)
 
-        verify(callback, never()).requestPermissions(any())
+        verify(caller, never()).requestPermissions(any())
     }
 
     private fun setIsProviderEnabled(provider: String = networkProvider, isEnabled: Boolean = false) {

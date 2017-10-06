@@ -58,7 +58,7 @@ class RxLocationManagerTestM {
 
     @Test
     fun test_PermissionBehaviorSuccess() {
-        val callback: BasePermissionBehavior.PermissionCallback = mock()
+        val caller: PermissionCaller = mock()
         val location: Location = mock()
 
         whenever(context.applicationContext.checkSelfPermission(any()))
@@ -67,7 +67,7 @@ class RxLocationManagerTestM {
                 .thenReturn(location)
 
         val susbcriber = defaultRxLocationManager.getLastLocation(networkProvider,
-                behaviors = PermissionBehavior(context, defaultRxLocationManager, callback))
+                behaviors = PermissionBehavior(context, defaultRxLocationManager, caller))
                 .test()
 
         Thread.sleep(100L)
@@ -78,7 +78,7 @@ class RxLocationManagerTestM {
             assertEquals(2, allValues.size)
             assert(permissions.contains(Manifest.permission.ACCESS_COARSE_LOCATION))
             assert(permissions.contains(Manifest.permission.ACCESS_FINE_LOCATION))
-            verify(callback, only()).requestPermissions(permissions.toTypedArray())
+            verify(caller, only()).requestPermissions(permissions.toTypedArray())
 
             defaultRxLocationManager.onRequestPermissionsResult(permissions.toTypedArray(),
                     intArrayOf(PackageManager.PERMISSION_GRANTED, PackageManager.PERMISSION_GRANTED))
@@ -92,13 +92,13 @@ class RxLocationManagerTestM {
 
     @Test
     fun test_PermissionTransformerDenied() {
-        val callback: BasePermissionBehavior.PermissionCallback = mock()
+        val caller: PermissionCaller = mock()
 
         whenever(context.applicationContext.checkSelfPermission(any()))
                 .thenReturn(PackageManager.PERMISSION_DENIED)
 
         val susbcriber = defaultRxLocationManager.getLastLocation(networkProvider,
-                behaviors = PermissionBehavior(context, defaultRxLocationManager, callback))
+                behaviors = PermissionBehavior(context, defaultRxLocationManager, caller))
                 .test()
 
         Thread.sleep(100L)
@@ -109,7 +109,7 @@ class RxLocationManagerTestM {
             assertEquals(2, allValues.size)
             assert(permissions.contains(Manifest.permission.ACCESS_COARSE_LOCATION))
             assert(permissions.contains(Manifest.permission.ACCESS_FINE_LOCATION))
-            verify(callback, only()).requestPermissions(permissions.toTypedArray())
+            verify(caller, only()).requestPermissions(permissions.toTypedArray())
 
             defaultRxLocationManager.onRequestPermissionsResult(permissions.toTypedArray(),
                     intArrayOf(PackageManager.PERMISSION_GRANTED, PackageManager.PERMISSION_DENIED))
@@ -121,7 +121,7 @@ class RxLocationManagerTestM {
 
     @Test
     fun test_PermissionTransformerBuilder() {
-        val callback: BasePermissionBehavior.PermissionCallback = mock()
+        val caller: PermissionCaller = mock()
         val locationBuilder = LocationRequestBuilder(defaultRxLocationManager)
         val location: Location = mock()
 
@@ -141,7 +141,7 @@ class RxLocationManagerTestM {
             return@doAnswer null
         }.whenever(locationManager).requestSingleUpdate(eq(networkProvider), any(), isNull())
 
-        val permissionTransformer = PermissionBehavior(context, defaultRxLocationManager, callback)
+        val permissionTransformer = PermissionBehavior(context, defaultRxLocationManager, caller)
 
         val susbcriber = locationBuilder.addLastLocation(networkProvider, behaviors = permissionTransformer)
                 .addRequestLocation(networkProvider, behaviors = permissionTransformer)
@@ -156,7 +156,7 @@ class RxLocationManagerTestM {
             assertEquals(2, allValues.size)
             assert(permissions.contains(Manifest.permission.ACCESS_COARSE_LOCATION))
             assert(permissions.contains(Manifest.permission.ACCESS_FINE_LOCATION))
-            verify(callback, only()).requestPermissions(permissions.toTypedArray())
+            verify(caller, only()).requestPermissions(permissions.toTypedArray())
 
             defaultRxLocationManager.onRequestPermissionsResult(permissions.toTypedArray(),
                     intArrayOf(PackageManager.PERMISSION_GRANTED, PackageManager.PERMISSION_GRANTED))
@@ -166,7 +166,7 @@ class RxLocationManagerTestM {
                     .assertCompleted()
                     .assertValue(location)
 
-            verify(callback, only()).requestPermissions(permissions.toTypedArray())
+            verify(caller, only()).requestPermissions(permissions.toTypedArray())
         }
     }
 }

@@ -5,13 +5,15 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 
+data class BehaviorParams(val provider: String? = null)
+
 /**
  * Base transformer to check and request runtime permissions
  * @param context any [Context] of your application
- * @param callback used to request permissions from [android.app.Activity]
+ * @param caller used to request permissions from [android.app.Activity]
  */
 abstract class BasePermissionBehavior(context: Context,
-                                      protected val callback: BasePermissionBehavior.PermissionCallback) {
+                                      protected val caller: PermissionCaller) {
     protected val context: Context = context.applicationContext
 
     /**
@@ -32,16 +34,4 @@ abstract class BasePermissionBehavior(context: Context,
             } else {
                 emptyArray()
             }
-
-    /**
-     * Used by [BasePermissionBehavior] to request permissions from [android.app.Activity]
-     */
-    interface PermissionCallback {
-        /**
-         * Called to request permissions
-         * @see android.app.Activity.requestPermissions
-         * @see android.app.Fragment.requestPermissions
-         */
-        fun requestPermissions(permissions: Array<String>)
-    }
 }

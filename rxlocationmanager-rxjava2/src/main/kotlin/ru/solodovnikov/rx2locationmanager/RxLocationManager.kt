@@ -161,7 +161,7 @@ class RxLocationManager internal constructor(context: Context,
     fun getProvider(name: String, vararg behaviors: MaybeBehavior) =
             Maybe.fromCallable { locationManager.getProvider(name) ?: throw NullEmittedException() }
                     .onErrorComplete { it is NullEmittedException }
-                    .applyBehaviors(behaviors, BehaviorParams())
+                    .applyBehaviors(behaviors, BehaviorParams(name))
 
     /**
      * Returns the current enabled/disabled status of the given provider.

@@ -15,16 +15,16 @@ import android.view.MenuItem;
 
 import java.util.concurrent.TimeUnit;
 
-import ru.solodovnikov.rxlocationmanager.BasePermissionBehavior;
 import ru.solodovnikov.rxlocationmanager.IgnoreErrorBehavior;
 import ru.solodovnikov.rxlocationmanager.LocationRequestBuilder;
 import ru.solodovnikov.rxlocationmanager.LocationTime;
 import ru.solodovnikov.rxlocationmanager.PermissionBehavior;
+import ru.solodovnikov.rxlocationmanager.PermissionCaller;
 import ru.solodovnikov.rxlocationmanager.RxLocationManager;
 import rx.Single;
 import rx.functions.Action1;
 
-public class MainActivity extends AppCompatActivity implements BasePermissionBehavior.PermissionCallback {
+public class MainActivity extends AppCompatActivity implements PermissionCaller {
     private static final int REQUEST_CODE_LOCATION_PERMISSIONS = 150;
 
     private RxLocationManager rxLocationManager;

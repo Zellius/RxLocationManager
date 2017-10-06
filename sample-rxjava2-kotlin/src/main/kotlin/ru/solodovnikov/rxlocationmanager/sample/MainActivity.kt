@@ -15,7 +15,7 @@ import io.reactivex.Single
 import ru.solodovnikov.rx2locationmanager.*
 import java.util.concurrent.TimeUnit
 
-class MainActivity : AppCompatActivity(), BasePermissionBehavior.PermissionCallback, ForResultCaller {
+class MainActivity : AppCompatActivity(), PermissionCaller, ForResultCaller {
     private val rxLocationManager: RxLocationManager by lazy { RxLocationManager(this) }
     private val locationRequestBuilder: LocationRequestBuilder by lazy { LocationRequestBuilder(rxLocationManager) }
 
@@ -96,7 +96,7 @@ class MainActivity : AppCompatActivity(), BasePermissionBehavior.PermissionCallb
 
     private fun requestLastNetworkOneMinuteOldLocation() {
         if (checkPermissions) {
-            rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(1, TimeUnit.MINUTES), PermissionBehavior(this, rxLocationManager, this))
+            rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(1, TimeUnit.MINUTES), EnableLocationBehavior.create(this, REQUEST_CODE_LOCATION_SETTINGS, { this }, rxLocationManager), PermissionBehavior(this, rxLocationManager, this))
         } else {
             rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(1, TimeUnit.MINUTES))
         }.testSubscribe("requestLastNetworkOneMinuteOldLocation")
@@ -104,7 +104,7 @@ class MainActivity : AppCompatActivity(), BasePermissionBehavior.PermissionCallb
 
     private fun requestLocation() {
         if (checkPermissions) {
-            rxLocationManager.requestLocation(LocationManager.NETWORK_PROVIDER, LocationTime(15, TimeUnit.SECONDS), PermissionBehavior(this, rxLocationManager, this))
+            rxLocationManager.requestLocation(LocationManager.NETWORK_PROVIDER, LocationTime(15, TimeUnit.SECONDS), EnableLocationBehavior.create(this, REQUEST_CODE_LOCATION_SETTINGS, { this }, rxLocationManager), PermissionBehavior(this, rxLocationManager, this))
         } else {
             rxLocationManager.requestLocation(LocationManager.NETWORK_PROVIDER, LocationTime(15, TimeUnit.SECONDS))
         }.testSubscribe("requestLocation")

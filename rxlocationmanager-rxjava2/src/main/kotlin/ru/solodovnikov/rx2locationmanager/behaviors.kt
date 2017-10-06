@@ -1,6 +1,7 @@
 package ru.solodovnikov.rx2locationmanager
 
 import android.app.Activity
+import android.app.Instrumentation
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -21,8 +22,6 @@ import io.reactivex.Single
 import io.reactivex.disposables.Disposable
 import java.util.*
 import android.app.Fragment as FragmentSys
-
-data class BehaviorParams(val provider: String? = null)
 
 interface SingleBehavior {
     fun <T> transform(upstream: Single<T>, params: BehaviorParams): Single<T>
@@ -51,8 +50,8 @@ interface Behavior : SingleBehavior, MaybeBehavior, ObservableBehavior, Completa
  */
 open class PermissionBehavior(context: Context,
                               private val rxLocationManager: RxLocationManager,
-                              callback: BasePermissionBehavior.PermissionCallback
-) : BasePermissionBehavior(context, callback), Behavior {
+                              caller: PermissionCaller
+) : BasePermissionBehavior(context, caller), Behavior {
 
     override fun <T> transform(upstream: Single<T>, params: BehaviorParams): Single<T> =
             checkPermissions().andThen(upstream)
@@ -87,7 +86,7 @@ open class PermissionBehavior(context: Context,
                             }
                         }.apply { emitter.setCancellable { dispose() } }
 
-                        callback.requestPermissions(deniedPermissions)
+                        caller.requestPermissions(deniedPermissions)
                     } else {
                         emitter.onComplete()
                     }
@@ -178,13 +177,16 @@ class EnableLocationBehavior(private val resolver: Resolver) : Behavior {
                 }.let { EnableLocationBehavior(it) }
     }
 
-    abstract class Resolver(protected val rxLocationManager: RxLocationManager) {
-        abstract internal fun create(provider: String): Completable
+    abstract class Resolver(private val rxLocationManager: RxLocationManager) {
+        abstract fun create(provider: String): Completable
 
-        internal fun checkProvider(provider: String) =
+        protected fun checkProvider(provider: String): Single<Boolean> =
                 rxLocationManager.getProvider(provider)
                         .switchIfEmpty { Maybe.error<LocationProvider>(ProviderNotAvailableException(provider)) }
                         .flatMapSingle { rxLocationManager.isProviderEnabled(it.name) }
+
+        protected fun subscribeToActivityResultUpdate(f: (Instrumentation.ActivityResult) -> Unit): Disposable =
+                rxLocationManager.subscribeToActivityResultUpdate(f)
     }
 
     class SettingsResolver(private val requestCode: Int,
@@ -194,7 +196,7 @@ class EnableLocationBehavior(private val resolver: Resolver) : Behavior {
                 checkProvider(provider).flatMap { isProviderEnabled ->
                     Single.create<Boolean> { emitter ->
                         if (!isProviderEnabled) {
-                            rxLocationManager.subscribeToActivityResultUpdate {
+                            subscribeToActivityResultUpdate {
                                 if (it.resultCode == Activity.RESULT_CANCELED) {
                                     emitter.onSuccess(true)
                                 } else {
@@ -238,7 +240,7 @@ class EnableLocationBehavior(private val resolver: Resolver) : Behavior {
                                 (it as? ApiException ?: throw it).also {
                                     when (it.statusCode) {
                                         CommonStatusCodes.RESOLUTION_REQUIRED -> {
-                                            rxLocationManager.subscribeToActivityResultUpdate {
+                                            subscribeToActivityResultUpdate {
                                                 LocationSettingsStates.fromIntent(it.resultData)
                                                         .isNetworkLocationUsable.also {
                                                     if (it) {

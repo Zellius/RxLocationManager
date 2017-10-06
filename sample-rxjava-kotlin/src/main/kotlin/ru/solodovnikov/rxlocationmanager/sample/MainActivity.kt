@@ -13,7 +13,7 @@ import ru.solodovnikov.rxlocationmanager.*
 import rx.Single
 import java.util.concurrent.TimeUnit
 
-class MainActivity : AppCompatActivity(), BasePermissionBehavior.PermissionCallback {
+class MainActivity : AppCompatActivity(), PermissionCaller {
     private val rxLocationManager: RxLocationManager by lazy { RxLocationManager(this) }
     private val locationRequestBuilder: LocationRequestBuilder by lazy { LocationRequestBuilder(rxLocationManager) }
 

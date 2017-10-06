@@ -19,14 +19,14 @@ import io.reactivex.Maybe;
 import io.reactivex.Single;
 import io.reactivex.functions.Action;
 import io.reactivex.functions.Consumer;
-import ru.solodovnikov.rx2locationmanager.BasePermissionBehavior;
 import ru.solodovnikov.rx2locationmanager.IgnoreErrorBehavior;
 import ru.solodovnikov.rx2locationmanager.LocationRequestBuilder;
 import ru.solodovnikov.rx2locationmanager.LocationTime;
 import ru.solodovnikov.rx2locationmanager.PermissionBehavior;
+import ru.solodovnikov.rx2locationmanager.PermissionCaller;
 import ru.solodovnikov.rx2locationmanager.RxLocationManager;
 
-public class MainActivity extends AppCompatActivity implements BasePermissionBehavior.PermissionCallback {
+public class MainActivity extends AppCompatActivity implements PermissionCaller {
     private static final int REQUEST_CODE_LOCATION_PERMISSIONS = 150;
 
     private RxLocationManager rxLocationManager;
