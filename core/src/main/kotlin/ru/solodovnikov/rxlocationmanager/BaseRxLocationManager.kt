@@ -30,4 +30,6 @@ abstract class BaseRxLocationManager(context: Context) {
             System.currentTimeMillis() - time < howOldCanBe.timeUnit.toMillis(howOldCanBe.time)
         }
     }
+
+    data class NmeaMessage(var nmea: String, var timestamp: Long)
 }

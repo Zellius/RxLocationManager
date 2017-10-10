@@ -155,6 +155,17 @@ class RxLocationManager internal constructor(context: Context,
      * @see LocationManager.getAllProviders
      */
     fun getAllProviders() = Single.fromCallable { locationManager.allProviders }
+            .compose(this::applySchedulers)
+
+    /**
+     * Returns a list of the names of location providers.
+     *
+     * @see LocationManager.getProviders
+     */
+    @JvmOverloads
+    fun getProviders(criteria: Criteria? = null, enabledOnly: Boolean) =
+            Single.fromCallable { locationManager.getProviders(criteria, enabledOnly) }
+                    .compose(this::applySchedulers)
 
     /**
      * Returns the name of the provider that best meets the given criteria.
@@ -164,6 +175,7 @@ class RxLocationManager internal constructor(context: Context,
     @JvmOverloads
     fun getBestProvider(criteria: Criteria, enabledOnly: Boolean = true) =
             Single.fromCallable { locationManager.getBestProvider(criteria, enabledOnly) }
+                    .compose(this::applySchedulers)
 
     /**
      * Returns the information associated with the location provider of the given name, or null if no provider exists by that name.
@@ -198,9 +210,9 @@ class RxLocationManager internal constructor(context: Context,
     internal fun subscribeToActivityResultUpdate(onUpdate: (Instrumentation.ActivityResult) -> Unit)
             = resultSubject.subscribe(onUpdate, {}, {})
 
-    private fun applySchedulers(s: Single<Location>) = s.subscribeOn(scheduler)
+    private fun <T> applySchedulers(s: Single<T>) = s.subscribeOn(scheduler)
 
-    private fun applySchedulers(s: Observable<Location>) = s.subscribeOn(scheduler)
+    private fun <T> applySchedulers(s: Observable<T>) = s.subscribeOn(scheduler)
 
     private fun <T> Single<T>.applyBehaviors(behaviors: Array<out SingleBehavior>, params: BehaviorParams) =
             let { behaviors.fold(it, { acc, transformer -> transformer.transform(acc, params) }) }

@@ -3,11 +3,10 @@ package ru.solodovnikov.rx2locationmanager
 import android.app.Instrumentation
 import android.content.Context
 import android.content.Intent
-import android.location.Criteria
-import android.location.Location
-import android.location.LocationListener
-import android.location.LocationManager
+import android.location.*
+import android.os.Build
 import android.os.Bundle
+import android.support.annotation.RequiresApi
 import io.reactivex.*
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.subjects.PublishSubject
@@ -110,7 +109,7 @@ class RxLocationManager internal constructor(context: Context,
                                minTime: Long = 0L,
                                minDistance: Float = 0F,
                                vararg behaviors: ObservableBehavior): Observable<Location> =
-            Observable.create(ObservableOnSubscribe<Location> {
+            Observable.create<Location> {
                 if (locationManager.isProviderEnabled(provider)) {
                     val locationListener = object : LocationListener {
                         override fun onLocationChanged(location: Location) {
@@ -134,7 +133,69 @@ class RxLocationManager internal constructor(context: Context,
                 } else {
                     it.onError(ProviderDisabledException(provider))
                 }
-            }).applyBehaviors(behaviors, BehaviorParams(provider)).compose(this::applySchedulers)
+            }.applyBehaviors(behaviors, BehaviorParams(provider)).compose(this::applySchedulers)
+
+    /**
+     * Adds a GPS status listener
+     *
+     * @see LocationManager.addGpsStatusListener
+     */
+    @Suppress("DEPRECATION")
+    fun addGpsStatusListener(vararg behaviors: ObservableBehavior): Observable<Int> =
+            Observable.create<Int> { emitter ->
+                GpsStatus.Listener { event -> emitter.onNext(event) }.also {
+                    emitter.setCancellable { locationManager.removeGpsStatusListener(it) }
+                    if (!locationManager.addGpsStatusListener(it)) {
+                        emitter.onComplete()
+                    }
+                }
+            }.applyBehaviors(behaviors, BehaviorParams()).compose(this::applySchedulers)
+
+    @RequiresApi(Build.VERSION_CODES.N)
+    fun addGnssStatusListener(vararg behaviors: ObservableBehavior): Observable<GnssStatus> =
+            Observable.create<GnssStatus> { e ->
+                object : GnssStatus.Callback() {
+                    override fun onSatelliteStatusChanged(status: GnssStatus) {
+                        super.onSatelliteStatusChanged(status)
+                        e.onNext(status)
+                    }
+
+                    override fun onStopped() {
+                        super.onStopped()
+                        e.onComplete()
+                    }
+                }.also {
+                    e.setCancellable { locationManager.unregisterGnssStatusCallback(it) }
+
+                    if (!locationManager.registerGnssStatusCallback(it)) {
+                        e.onComplete()
+                    }
+                }
+            }.applyBehaviors(behaviors, BehaviorParams()).compose(this::applySchedulers)
+
+    /**
+     * @see LocationManager.addNmeaListener
+     */
+    fun addNmeaListener(vararg behaviors: ObservableBehavior): Observable<NmeaMessage> =
+            Observable.create<NmeaMessage> { e ->
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    OnNmeaMessageListener { message, timestamp -> e.onNext(NmeaMessage(message, timestamp)) }.also {
+                        e.setCancellable { locationManager.removeNmeaListener(it) }
+
+                        if (!locationManager.addNmeaListener(it)) {
+                            e.onComplete()
+                        }
+                    }
+                } else {
+                    GpsStatus.NmeaListener { timestamp, nmea -> e.onNext(NmeaMessage(nmea, timestamp)) }.also {
+                        e.setCancellable { locationManager.removeNmeaListener(it) }
+
+                        if (!locationManager.addNmeaListener(it)) {
+                            e.onComplete()
+                        }
+                    }
+                }
+            }.applyBehaviors(behaviors, BehaviorParams()).compose(this::applySchedulers)
 
     /**
      * Returns a list of the names of all known location providers.
@@ -142,6 +203,17 @@ class RxLocationManager internal constructor(context: Context,
      * @see LocationManager.getAllProviders
      */
     fun getAllProviders() = Single.fromCallable { locationManager.allProviders }
+            .compose(this::applySchedulers)
+
+    /**
+     * Returns a list of the names of location providers.
+     *
+     * @see LocationManager.getProviders
+     */
+    @JvmOverloads
+    fun getProviders(criteria: Criteria? = null, enabledOnly: Boolean): Single<List<String>> =
+            Single.fromCallable { locationManager.getProviders(criteria, enabledOnly) }
+                    .compose(this::applySchedulers)
 
     /**
      * Returns the name of the provider that best meets the given criteria.
@@ -149,8 +221,9 @@ class RxLocationManager internal constructor(context: Context,
      * @see LocationManager.getBestProvider
      */
     @JvmOverloads
-    fun getBestProvider(criteria: Criteria, enabledOnly: Boolean = true) =
+    fun getBestProvider(criteria: Criteria, enabledOnly: Boolean = true): Single<String> =
             Single.fromCallable { locationManager.getBestProvider(criteria, enabledOnly) }
+                    .compose(this::applySchedulers)
 
     /**
      * Returns the information associated with the location provider of the given name, or null if no provider exists by that name.
@@ -195,10 +268,10 @@ class RxLocationManager internal constructor(context: Context,
     private fun <T> Observable<T>.applyBehaviors(behaviors: Array<out ObservableBehavior>, params: BehaviorParams) =
             let { behaviors.fold(it, { acc, transformer -> transformer.transform(acc, params) }) }
 
-    private fun applySchedulers(s: Single<Location>) = s.subscribeOn(scheduler)
+    private fun <T> applySchedulers(s: Single<T>) = s.subscribeOn(scheduler)
 
-    private fun applySchedulers(m: Maybe<Location>) = m.subscribeOn(scheduler)
+    private fun <T> applySchedulers(m: Maybe<T>) = m.subscribeOn(scheduler)
 
-    private fun applySchedulers(m: Observable<Location>) = m.subscribeOn(scheduler)
+    private fun <T> applySchedulers(m: Observable<T>) = m.subscribeOn(scheduler)
 }
 

@@ -1,10 +1,7 @@
 package ru.solodovnikov.rx2locationmanager
 
 import android.content.Context
-import android.location.Location
-import android.location.LocationListener
-import android.location.LocationManager
-import android.location.LocationProvider
+import android.location.*
 import android.os.Build
 import com.nhaarman.mockito_kotlin.*
 import io.reactivex.schedulers.Schedulers
@@ -334,33 +331,83 @@ class RxLocationManager2Test {
 
     @Test
     fun test_GetProvider() {
-        val providerAsString = LocationManager.GPS_PROVIDER
         val provider = mock<LocationProvider>()
 
-        whenever(locationManager.getProvider(eq(providerAsString)))
+        whenever(locationManager.getProvider(eq(networkProvider)))
                 .thenReturn(provider)
 
-        defaultRxLocationManager.getProvider(providerAsString)
+        defaultRxLocationManager.getProvider(networkProvider)
                 .test()
                 .await()
                 .assertNoErrors()
                 .assertComplete()
                 .assertValue(provider)
+
+        verify(locationManager, only()).getProvider(eq(networkProvider))
     }
 
     @Test
     fun test_GetProviderEmpty() {
-        val providerAsString = LocationManager.GPS_PROVIDER
-
-        whenever(locationManager.getProvider(eq(providerAsString)))
+        whenever(locationManager.getProvider(eq(networkProvider)))
                 .thenReturn(null)
 
-        defaultRxLocationManager.getProvider(providerAsString)
+        defaultRxLocationManager.getProvider(networkProvider)
                 .test()
                 .await()
                 .assertNoErrors()
                 .assertComplete()
                 .assertValueCount(0)
+
+        verify(locationManager, only()).getProvider(eq(networkProvider))
+    }
+
+    @Test
+    fun test_IsProviderEnabled() {
+        setIsProviderEnabled(isEnabled = true)
+
+        defaultRxLocationManager.isProviderEnabled(networkProvider)
+                .test()
+                .assertNoErrors()
+                .assertComplete()
+                .assertValue(true)
+
+        verify(locationManager, only()).isProviderEnabled(eq(networkProvider))
+    }
+
+    @Test
+    fun test_GetProviders() {
+        val c = Criteria()
+        val enabledOnly = true
+
+        val providers = emptyList<String>()
+
+        whenever(locationManager.getProviders(eq(c), eq(enabledOnly)))
+                .thenReturn(providers)
+
+        defaultRxLocationManager.getProviders(c, enabledOnly)
+                .test()
+                .assertNoErrors()
+                .assertComplete()
+                .assertValue(providers)
+
+        verify(locationManager, only()).getProviders(eq(c), eq(enabledOnly))
+    }
+
+    @Test
+    fun test_GetBestProvider() {
+        val c = Criteria()
+        val enabledOnly = true
+
+        whenever(locationManager.getBestProvider(eq(c), eq(enabledOnly)))
+                .thenReturn(networkProvider)
+
+        defaultRxLocationManager.getBestProvider(c, enabledOnly)
+                .test()
+                .assertNoErrors()
+                .assertComplete()
+                .assertValue(networkProvider)
+
+        verify(locationManager, only()).getBestProvider(eq(c), eq(enabledOnly))
     }
 
     /**

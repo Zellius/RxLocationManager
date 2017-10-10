@@ -23,11 +23,11 @@ class ProviderNotAvailableException(provider: String) : Throwable("There is no s
 class LocationDisabledException : Throwable("Location is disabled on the device")
 
 /**
+ * Used by library to indicate which Throwable should be ignored
+ */
+class IgnorableException : Throwable()
+
+/**
  * Throws when null emitted
  */
 internal class NullEmittedException : Throwable()
-
-/**
- * Used by library to indicate which Throwable should be ignored
- */
-internal class IgnorableException : Throwable()

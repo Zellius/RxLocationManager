@@ -143,7 +143,7 @@ class EnableLocationBehavior(private val resolver: Resolver) : Behavior {
         fun create(context: Context,
                    requestCode: Int,
                    rxLocationManager: RxLocationManager,
-                   forResultCaller: () -> ForResultCaller): EnableLocationBehavior =
+                   forResultCaller: ForResultCaller): EnableLocationBehavior =
                 if (try {
                     Class.forName("com.google.android.gms.location.LocationServices") != null
                 } catch (e: Exception) {
@@ -174,7 +174,7 @@ class EnableLocationBehavior(private val resolver: Resolver) : Behavior {
 
     class SettingsResolver(private val requestCode: Int,
                            rxLocationManager: RxLocationManager,
-                           private val forResultCaller: () -> ForResultCaller) : Resolver(rxLocationManager) {
+                           private val forResultCaller: ForResultCaller) : Resolver(rxLocationManager) {
         override fun create(provider: String): Completable =
                 checkProvider(provider).flatMap { isProviderEnabled ->
                     Single.fromEmitter<Boolean> { emitter ->
@@ -187,7 +187,7 @@ class EnableLocationBehavior(private val resolver: Resolver) : Behavior {
                                 }
                             }.apply { emitter.setCancellation { unsubscribe() } }
 
-                            forResultCaller().startActivityForResult(
+                            forResultCaller.startActivityForResult(
                                     Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS), requestCode)
                         } else {
                             emitter.onSuccess(false)
@@ -211,7 +211,7 @@ class EnableLocationBehavior(private val resolver: Resolver) : Behavior {
     class GoogleResolver(context: Context,
                          private val requestCode: Int,
                          rxLocationManager: RxLocationManager,
-                         private val forResultCaller: () -> ForResultCaller) : Resolver(rxLocationManager) {
+                         private val forResultCaller: ForResultCaller) : Resolver(rxLocationManager) {
         private val context = context.applicationContext
 
         override fun create(provider: String): Completable =
@@ -235,7 +235,7 @@ class EnableLocationBehavior(private val resolver: Resolver) : Behavior {
                                             }.apply { emitter.setCancellation { unsubscribe() } }
 
                                             (it as? ResolvableApiException ?: throw it).also { e ->
-                                                forResultCaller().startIntentSenderForResult(e.resolution.intentSender,
+                                                forResultCaller.startIntentSenderForResult(e.resolution.intentSender,
                                                         requestCode, null, 0, 0, 0, null)
                                             }
                                         }
