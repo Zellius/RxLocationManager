@@ -8,6 +8,12 @@
         android:title="@string/check_permissions"
         app:showAsAction="never" />
     <item
+        android:id="@+id/enable_location"
+        android:checkable="true"
+        android:checked="false"
+        android:title="@string/enable_location"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/last_network"
         android:title="@string/last_network"
         app:showAsAction="never" />

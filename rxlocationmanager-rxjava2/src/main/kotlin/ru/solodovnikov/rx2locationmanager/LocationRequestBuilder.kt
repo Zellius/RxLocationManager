@@ -30,7 +30,6 @@ class LocationRequestBuilder(rxLocationManager: RxLocationManager
      * @param behaviors extra behaviors
      *
      * @return same builder
-     * @see baseAddRequestLocation
      */
     @JvmOverloads
     fun addRequestLocation(provider: String,
@@ -62,7 +61,6 @@ class LocationRequestBuilder(rxLocationManager: RxLocationManager
      * @param behaviors extra behaviors
      *
      * @return same builder
-     * @see baseAddLastLocation
      */
     @JvmOverloads
     fun addLastLocation(provider: String,

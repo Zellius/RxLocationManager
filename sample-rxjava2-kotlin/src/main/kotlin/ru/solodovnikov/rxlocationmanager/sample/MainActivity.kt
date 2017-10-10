@@ -19,9 +19,13 @@ class MainActivity : AppCompatActivity(), PermissionCaller, ForResultCaller {
     private val rxLocationManager: RxLocationManager by lazy { RxLocationManager(this) }
     private val locationRequestBuilder: LocationRequestBuilder by lazy { LocationRequestBuilder(rxLocationManager) }
 
+    private val enableLocationBehavior: Behavior by lazy { EnableLocationBehavior.create(this, REQUEST_CODE_LOCATION_SETTINGS, rxLocationManager, this) }
+    private val permissionBehavior: Behavior by lazy { PermissionBehavior(this, rxLocationManager, this) }
+
     private val coordinatorLayout by lazy { findViewById<CoordinatorLayout>(R.id.root) }
 
     private var checkPermissions = false
+    private var enableLocation = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,6 +44,11 @@ class MainActivity : AppCompatActivity(), PermissionCaller, ForResultCaller {
             R.id.check_permissions -> {
                 item.isChecked = !item.isChecked
                 checkPermissions = item.isChecked
+                return true
+            }
+            R.id.enable_location -> {
+                item.isChecked = !item.isChecked
+                enableLocation = item.isChecked
                 return true
             }
             R.id.last_network -> {
@@ -86,45 +95,44 @@ class MainActivity : AppCompatActivity(), PermissionCaller, ForResultCaller {
         ActivityCompat.requestPermissions(this, permissions, REQUEST_CODE_LOCATION_PERMISSIONS)
     }
 
+    private fun getBehaviors() =
+            mutableListOf<Behavior>().also {
+                if (checkPermissions) {
+                    it.add(permissionBehavior)
+                }
+                if (enableLocation) {
+                    it.add(enableLocationBehavior)
+                }
+            }.toTypedArray()
+
     private fun requestLastNetworkLocation() {
-        if (checkPermissions) {
-            rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, behaviors = *arrayOf(EnableLocationBehavior.create(this, REQUEST_CODE_LOCATION_SETTINGS, { this }, rxLocationManager), PermissionBehavior(this, rxLocationManager, this)))
-        } else {
-            rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER)
-        }.testSubscribe("requestLastNetworkLocation")
+        rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, behaviors = *getBehaviors())
+                .testSubscribe("requestLastNetworkLocation")
     }
 
     private fun requestLastNetworkOneMinuteOldLocation() {
-        if (checkPermissions) {
-            rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(1, TimeUnit.MINUTES), EnableLocationBehavior.create(this, REQUEST_CODE_LOCATION_SETTINGS, { this }, rxLocationManager), PermissionBehavior(this, rxLocationManager, this))
-        } else {
-            rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(1, TimeUnit.MINUTES))
-        }.testSubscribe("requestLastNetworkOneMinuteOldLocation")
+        rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER,
+                LocationTime(1, TimeUnit.MINUTES),
+                *getBehaviors())
+                .testSubscribe("requestLastNetworkOneMinuteOldLocation")
     }
 
     private fun requestLocation() {
-        if (checkPermissions) {
-            rxLocationManager.requestLocation(LocationManager.NETWORK_PROVIDER, LocationTime(15, TimeUnit.SECONDS), EnableLocationBehavior.create(this, REQUEST_CODE_LOCATION_SETTINGS, { this }, rxLocationManager), PermissionBehavior(this, rxLocationManager, this))
-        } else {
-            rxLocationManager.requestLocation(LocationManager.NETWORK_PROVIDER, LocationTime(15, TimeUnit.SECONDS))
-        }.testSubscribe("requestLocation")
+        rxLocationManager.requestLocation(LocationManager.NETWORK_PROVIDER,
+                LocationTime(15, TimeUnit.SECONDS),
+                *getBehaviors())
+                .testSubscribe("requestLocation")
     }
 
     private fun requestBuild() {
-        if (checkPermissions) {
-            val permissionTransformer = PermissionBehavior(this, rxLocationManager, this)
-            locationRequestBuilder
-                    .addLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(30, TimeUnit.MINUTES), permissionTransformer)
-                    .addRequestLocation(LocationManager.NETWORK_PROVIDER, LocationTime(15, TimeUnit.SECONDS), permissionTransformer)
-                    .setDefaultLocation(Location(LocationManager.PASSIVE_PROVIDER))
-                    .create()
-        } else {
-            locationRequestBuilder
-                    .addLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(30, TimeUnit.MINUTES))
-                    .addRequestLocation(LocationManager.NETWORK_PROVIDER, LocationTime(15, TimeUnit.SECONDS))
-                    .setDefaultLocation(Location(LocationManager.PASSIVE_PROVIDER))
-                    .create()
-        }.testSubscribe("requestBuild")
+        val behaviors = getBehaviors()
+
+        locationRequestBuilder
+                .addLastLocation(LocationManager.NETWORK_PROVIDER, LocationTime(30, TimeUnit.MINUTES), *behaviors)
+                .addRequestLocation(LocationManager.NETWORK_PROVIDER, LocationTime(15, TimeUnit.SECONDS), *behaviors)
+                .setDefaultLocation(Location(LocationManager.PASSIVE_PROVIDER))
+                .create()
+                .testSubscribe("requestBuild")
     }
 
     private fun requestBuildIgnoreSecurityError() {
@@ -143,23 +151,23 @@ class MainActivity : AppCompatActivity(), PermissionCaller, ForResultCaller {
                 .show()
     }
 
-    fun Maybe<Location>.testSubscribe(methodName: String) {
-        subscribe({ showLocationMessage(it, methodName) },
-                { showErrorMessage(it, methodName) },
-                { showSnackbar("$methodName Completed") })
-    }
-
-    fun Single<Location>.testSubscribe(methodName: String) {
-        subscribe({ showLocationMessage(it, methodName) },
-                { showErrorMessage(it, methodName) })
-    }
-
     private fun showLocationMessage(location: Location?, methodName: String) {
         showSnackbar("$methodName Success: ${location?.toString() ?: "Empty location"}")
     }
 
     private fun showErrorMessage(throwable: Throwable, methodName: String) {
         showSnackbar("$methodName Error: ${throwable.message}")
+    }
+
+    private fun Maybe<Location>.testSubscribe(methodName: String) {
+        subscribe({ showLocationMessage(it, methodName) },
+                { showErrorMessage(it, methodName) },
+                { showSnackbar("$methodName Completed") })
+    }
+
+    private fun Single<Location>.testSubscribe(methodName: String) {
+        subscribe({ showLocationMessage(it, methodName) },
+                { showErrorMessage(it, methodName) })
     }
 
     companion object {

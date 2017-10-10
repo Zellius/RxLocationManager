@@ -66,8 +66,7 @@ open class PermissionBehavior(context: Context,
                     if (deniedPermissions.isNotEmpty()) {
                         //wait until user approve permissions or dispose action
                         subscribeToPermissionUpdate {
-                            val resultPermissions = it.first
-                            val resultPermissionsResults = it.second
+                            val (resultPermissions, resultPermissionsResults) = it
                             if (!Arrays.equals(resultPermissions, deniedPermissions) ||
                                     resultPermissionsResults
                                             .find { it == PackageManager.PERMISSION_DENIED } != null) {
@@ -143,16 +142,16 @@ class EnableLocationBehavior(private val resolver: Resolver) : Behavior {
         @JvmStatic
         fun create(context: Context,
                    requestCode: Int,
-                   callerProvider: () -> ForResultCaller,
-                   rxLocationManager: RxLocationManager): EnableLocationBehavior =
+                   rxLocationManager: RxLocationManager,
+                   forResultCaller: () -> ForResultCaller): EnableLocationBehavior =
                 if (try {
                     Class.forName("com.google.android.gms.location.LocationServices") != null
                 } catch (e: Exception) {
                     false
                 }) {
-                    GoogleResolver(context, requestCode, callerProvider, rxLocationManager)
+                    GoogleResolver(context, requestCode, rxLocationManager, forResultCaller)
                 } else {
-                    SettingsResolver(requestCode, callerProvider, rxLocationManager)
+                    SettingsResolver(requestCode, rxLocationManager, forResultCaller)
                 }.let { EnableLocationBehavior(it) }
     }
 
@@ -174,8 +173,8 @@ class EnableLocationBehavior(private val resolver: Resolver) : Behavior {
     }
 
     class SettingsResolver(private val requestCode: Int,
-                           private val callerProvider: () -> ForResultCaller,
-                           rxLocationManager: RxLocationManager) : Resolver(rxLocationManager) {
+                           rxLocationManager: RxLocationManager,
+                           private val forResultCaller: () -> ForResultCaller) : Resolver(rxLocationManager) {
         override fun create(provider: String): Completable =
                 checkProvider(provider).flatMap { isProviderEnabled ->
                     Single.fromEmitter<Boolean> { emitter ->
@@ -188,7 +187,7 @@ class EnableLocationBehavior(private val resolver: Resolver) : Behavior {
                                 }
                             }.apply { emitter.setCancellation { unsubscribe() } }
 
-                            callerProvider().startActivityForResult(
+                            forResultCaller().startActivityForResult(
                                     Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS), requestCode)
                         } else {
                             emitter.onSuccess(false)
@@ -211,8 +210,8 @@ class EnableLocationBehavior(private val resolver: Resolver) : Behavior {
 
     class GoogleResolver(context: Context,
                          private val requestCode: Int,
-                         private val callerProvider: () -> ForResultCaller,
-                         rxLocationManager: RxLocationManager) : Resolver(rxLocationManager) {
+                         rxLocationManager: RxLocationManager,
+                         private val forResultCaller: () -> ForResultCaller) : Resolver(rxLocationManager) {
         private val context = context.applicationContext
 
         override fun create(provider: String): Completable =
@@ -236,7 +235,7 @@ class EnableLocationBehavior(private val resolver: Resolver) : Behavior {
                                             }.apply { emitter.setCancellation { unsubscribe() } }
 
                                             (it as? ResolvableApiException ?: throw it).also { e ->
-                                                callerProvider().startIntentSenderForResult(e.resolution.intentSender,
+                                                forResultCaller().startIntentSenderForResult(e.resolution.intentSender,
                                                         requestCode, null, 0, 0, 0, null)
                                             }
                                         }

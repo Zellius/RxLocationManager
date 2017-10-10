@@ -4,6 +4,7 @@ import android.content.Context
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.location.LocationProvider
 import android.os.Build
 import com.nhaarman.mockito_kotlin.*
 import io.reactivex.schedulers.Schedulers
@@ -329,6 +330,37 @@ class RxLocationManager2Test {
                 .assertNoErrors()
                 .assertComplete()
                 .assertValue(location)
+    }
+
+    @Test
+    fun test_GetProvider() {
+        val providerAsString = LocationManager.GPS_PROVIDER
+        val provider = mock<LocationProvider>()
+
+        whenever(locationManager.getProvider(eq(providerAsString)))
+                .thenReturn(provider)
+
+        defaultRxLocationManager.getProvider(providerAsString)
+                .test()
+                .await()
+                .assertNoErrors()
+                .assertComplete()
+                .assertValue(provider)
+    }
+
+    @Test
+    fun test_GetProviderEmpty() {
+        val providerAsString = LocationManager.GPS_PROVIDER
+
+        whenever(locationManager.getProvider(eq(providerAsString)))
+                .thenReturn(null)
+
+        defaultRxLocationManager.getProvider(providerAsString)
+                .test()
+                .await()
+                .assertNoErrors()
+                .assertComplete()
+                .assertValueCount(0)
     }
 
     /**
