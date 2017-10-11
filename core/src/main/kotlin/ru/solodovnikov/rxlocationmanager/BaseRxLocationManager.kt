@@ -31,5 +31,5 @@ abstract class BaseRxLocationManager(context: Context) {
         }
     }
 
-    data class NmeaMessage(var nmea: String, var timestamp: Long)
+    data class NmeaData(var nmea: String, var timestamp: Long)
 }

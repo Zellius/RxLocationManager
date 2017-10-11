@@ -173,21 +173,23 @@ class RxLocationManager internal constructor(context: Context,
                 }
             }.applyBehaviors(behaviors, BehaviorParams()).compose(this::applySchedulers)
 
+
     /**
      * @see LocationManager.addNmeaListener
      */
-    fun addNmeaListener(vararg behaviors: ObservableBehavior): Observable<NmeaMessage> =
-            Observable.create<NmeaMessage> { e ->
+    @Suppress("DEPRECATION")
+    fun addNmeaListener(vararg behaviors: ObservableBehavior): Observable<NmeaData> =
+            Observable.create<NmeaData> { e ->
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    OnNmeaMessageListener { message, timestamp -> e.onNext(NmeaMessage(message, timestamp)) }.also {
-                        e.setCancellable { locationManager.removeNmeaListener(it) }
+                    val listener = OnNmeaMessageListener { message, timestamp -> e.onNext(NmeaData(message, timestamp)) }
 
-                        if (!locationManager.addNmeaListener(it)) {
-                            e.onComplete()
-                        }
+                    e.setCancellable { locationManager.removeNmeaListener(listener) }
+
+                    if (!locationManager.addNmeaListener(listener)) {
+                        e.onComplete()
                     }
                 } else {
-                    GpsStatus.NmeaListener { timestamp, nmea -> e.onNext(NmeaMessage(nmea, timestamp)) }.also {
+                    GpsStatus.NmeaListener { timestamp, nmea -> e.onNext(NmeaData(nmea, timestamp)) }.also {
                         e.setCancellable { locationManager.removeNmeaListener(it) }
 
                         if (!locationManager.addNmeaListener(it)) {

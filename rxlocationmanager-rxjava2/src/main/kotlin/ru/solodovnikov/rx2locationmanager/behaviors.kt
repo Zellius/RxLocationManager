@@ -21,7 +21,6 @@ import io.reactivex.Observable
 import io.reactivex.Single
 import io.reactivex.disposables.Disposable
 import java.util.*
-import android.app.Fragment as FragmentSys
 
 interface SingleBehavior {
     fun <T> transform(upstream: Single<T>, params: BehaviorParams): Single<T>
