@@ -73,7 +73,7 @@ class RxLocationManager internal constructor(context: Context,
                         vararg behaviors: SingleBehavior): Single<Location> =
             Observable.create<Location>({ emitter ->
                 if (locationManager.isProviderEnabled(provider)) {
-                    val locationListener = object : LocationListener {
+                    object : LocationListener {
                         override fun onLocationChanged(location: Location) {
                             with(emitter) {
                                 onNext(location)
