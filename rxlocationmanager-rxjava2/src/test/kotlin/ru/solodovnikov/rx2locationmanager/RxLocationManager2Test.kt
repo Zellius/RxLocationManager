@@ -410,6 +410,32 @@ class RxLocationManager2Test {
         verify(locationManager, only()).getBestProvider(eq(c), eq(enabledOnly))
     }
 
+    @Test
+    fun test_GetGpsStatusEmpty() {
+        val gpsStatus = mock<GpsStatus>()
+
+        whenever(locationManager.getGpsStatus(isNull())).thenReturn(gpsStatus)
+
+        defaultRxLocationManager.getGpsStatus()
+                .test()
+                .assertNoErrors()
+                .assertComplete()
+                .assertValue(gpsStatus)
+    }
+
+    @Test
+    fun test_GetGpsStatusNotEmpty() {
+        val gpsStatus = mock<GpsStatus>()
+
+        whenever(locationManager.getGpsStatus(eq(gpsStatus))).thenReturn(gpsStatus)
+
+        defaultRxLocationManager.getGpsStatus(gpsStatus)
+                .test()
+                .assertNoErrors()
+                .assertComplete()
+                .assertValue(gpsStatus)
+    }
+
     /**
      * Test [PermissionBehavior]
      */

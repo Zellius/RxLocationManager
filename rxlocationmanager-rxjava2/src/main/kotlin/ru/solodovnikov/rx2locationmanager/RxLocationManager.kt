@@ -284,9 +284,8 @@ class RxLocationManager internal constructor(context: Context,
      */
     @JvmOverloads
     @Suppress("DEPRECATION")
-    fun getGpsStatus(status: GpsStatus? = null, vararg behaviors: SingleBehavior) =
+    fun getGpsStatus(status: GpsStatus? = null) =
             Single.fromCallable { locationManager.getGpsStatus(status) }
-                    .applyBehaviors(behaviors, BehaviorParams())
                     .compose(this::applySchedulers)
 
     /**
