@@ -68,30 +68,29 @@ class RxLocationManager internal constructor(context: Context,
     fun requestLocation(provider: String,
                         timeOut: LocationTime? = null,
                         vararg behaviors: SingleBehavior): Single<Location> =
-            Single.create(SingleOnSubscribe<Location> {
+            Single.create(SingleOnSubscribe<Location> { emitter ->
                 if (locationManager.isProviderEnabled(provider)) {
-                    val locationListener = object : LocationListener {
+                    object : LocationListener {
                         override fun onLocationChanged(location: Location) {
-                            it.onSuccess(location)
+                            emitter.onSuccess(location)
                         }
 
                         override fun onProviderDisabled(p: String?) {
                             if (provider == p) {
-                                it.onError(ProviderDisabledException(provider))
+                                emitter.onError(ProviderDisabledException(provider))
                             }
                         }
 
                         override fun onStatusChanged(p0: String?, p1: Int, p2: Bundle?) {}
 
                         override fun onProviderEnabled(p: String?) {}
+                    }.also {
+                        emitter.setCancellable { locationManager.removeUpdates(it) }
+
+                        locationManager.requestSingleUpdate(provider, it, null)
                     }
-
-                    locationManager.requestSingleUpdate(provider, locationListener, null)
-
-                    it.setCancellable { locationManager.removeUpdates(locationListener) }
-
                 } else {
-                    it.onError(ProviderDisabledException(provider))
+                    emitter.onError(ProviderDisabledException(provider))
                 }
             }).compose { if (timeOut != null) it.timeout(timeOut.time, timeOut.timeUnit) else it }
                     .applyBehaviors(behaviors, BehaviorParams(provider))
@@ -109,29 +108,29 @@ class RxLocationManager internal constructor(context: Context,
                                minTime: Long = 0L,
                                minDistance: Float = 0F,
                                vararg behaviors: ObservableBehavior): Observable<Location> =
-            Observable.create<Location> {
+            Observable.create<Location> { emitter ->
                 if (locationManager.isProviderEnabled(provider)) {
-                    val locationListener = object : LocationListener {
+                    object : LocationListener {
                         override fun onLocationChanged(location: Location) {
-                            it.onNext(location)
+                            emitter.onNext(location)
                         }
 
-                        override fun onProviderDisabled(p: String?) {
+                        override fun onProviderDisabled(p: String) {
                             if (provider == p) {
-                                it.onError(ProviderDisabledException(p))
+                                emitter.onError(ProviderDisabledException(p))
                             }
                         }
 
                         override fun onStatusChanged(provider: String, p1: Int, p2: Bundle?) {}
 
                         override fun onProviderEnabled(provider: String) {}
+                    }.also {
+                        emitter.setCancellable { locationManager.removeUpdates(it) }
+
+                        locationManager.requestLocationUpdates(provider, minTime, minDistance, it)
                     }
-
-                    locationManager.requestLocationUpdates(provider, minTime, minDistance, locationListener)
-
-                    it.setCancellable { locationManager.removeUpdates(locationListener) }
                 } else {
-                    it.onError(ProviderDisabledException(provider))
+                    emitter.onError(ProviderDisabledException(provider))
                 }
             }.applyBehaviors(behaviors, BehaviorParams(provider)).compose(this::applySchedulers)
 
@@ -146,56 +145,149 @@ class RxLocationManager internal constructor(context: Context,
                 GpsStatus.Listener { event -> emitter.onNext(event) }.also {
                     emitter.setCancellable { locationManager.removeGpsStatusListener(it) }
                     if (!locationManager.addGpsStatusListener(it)) {
-                        emitter.onComplete()
+                        emitter.onError(ListenerNotRegisteredException())
                     }
                 }
             }.applyBehaviors(behaviors, BehaviorParams()).compose(this::applySchedulers)
 
+
+    /**
+     * Registers a GNSS status callback.
+     *
+     * @see LocationManager.registerGnssStatusCallback
+     */
     @RequiresApi(Build.VERSION_CODES.N)
-    fun addGnssStatusListener(vararg behaviors: ObservableBehavior): Observable<GnssStatus> =
-            Observable.create<GnssStatus> { e ->
+    fun addGnssStatusListener(vararg behaviors: ObservableBehavior): Observable<GnssStatusResponse> =
+            Observable.create<GnssStatusResponse> { emitter ->
                 object : GnssStatus.Callback() {
                     override fun onSatelliteStatusChanged(status: GnssStatus) {
                         super.onSatelliteStatusChanged(status)
-                        e.onNext(status)
+                        emitter.onNext(GnssStatusResponse.GnssSatelliteStatusChanged(status))
                     }
 
                     override fun onStopped() {
                         super.onStopped()
-                        e.onComplete()
+                        emitter.onNext(GnssStatusResponse.GnssStopped())
+                    }
+
+                    override fun onStarted() {
+                        super.onStarted()
+                        emitter.onNext(GnssStatusResponse.GnssStarted())
+                    }
+
+                    override fun onFirstFix(ttffMillis: Int) {
+                        super.onFirstFix(ttffMillis)
+                        emitter.onNext(GnssStatusResponse.GnssFirstFix(ttffMillis))
                     }
                 }.also {
-                    e.setCancellable { locationManager.unregisterGnssStatusCallback(it) }
+                    emitter.setCancellable { locationManager.unregisterGnssStatusCallback(it) }
 
                     if (!locationManager.registerGnssStatusCallback(it)) {
-                        e.onComplete()
+                        emitter.onError(ListenerNotRegisteredException())
                     }
                 }
             }.applyBehaviors(behaviors, BehaviorParams()).compose(this::applySchedulers)
 
     /**
+     * Adds an NMEA listener.
+     *
      * @see LocationManager.addNmeaListener
      */
-    fun addNmeaListener(vararg behaviors: ObservableBehavior): Observable<NmeaMessage> =
+    @RequiresApi(Build.VERSION_CODES.N)
+    fun addNmeaListenerN(vararg behaviors: ObservableBehavior): Observable<NmeaMessage> =
             Observable.create<NmeaMessage> { e ->
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    OnNmeaMessageListener { message, timestamp -> e.onNext(NmeaMessage(message, timestamp)) }.also {
-                        e.setCancellable { locationManager.removeNmeaListener(it) }
+                OnNmeaMessageListener { message, timestamp -> e.onNext(NmeaMessage(message, timestamp)) }.also {
+                    e.setCancellable { locationManager.removeNmeaListener(it) }
 
-                        if (!locationManager.addNmeaListener(it)) {
-                            e.onComplete()
-                        }
-                    }
-                } else {
-                    GpsStatus.NmeaListener { timestamp, nmea -> e.onNext(NmeaMessage(nmea, timestamp)) }.also {
-                        e.setCancellable { locationManager.removeNmeaListener(it) }
-
-                        if (!locationManager.addNmeaListener(it)) {
-                            e.onComplete()
-                        }
+                    if (!locationManager.addNmeaListener(it)) {
+                        e.onError(ListenerNotRegisteredException())
                     }
                 }
             }.applyBehaviors(behaviors, BehaviorParams()).compose(this::applySchedulers)
+
+    /**
+     * Adds an NMEA listener.
+     *
+     * @see LocationManager.addNmeaListener
+     */
+    @Suppress("DEPRECATION")
+    fun addNmeaListener(vararg behaviors: ObservableBehavior): Observable<NmeaMessage> =
+            Observable.create<NmeaMessage> { e ->
+                GpsStatus.NmeaListener { timestamp, nmea -> e.onNext(NmeaMessage(nmea, timestamp)) }.also {
+                    e.setCancellable { locationManager.removeNmeaListener(it) }
+
+                    if (!locationManager.addNmeaListener(it)) {
+                        e.onError(ListenerNotRegisteredException())
+                    }
+
+                }
+            }.applyBehaviors(behaviors, BehaviorParams()).compose(this::applySchedulers)
+
+    /**
+     * Registers a GPS Measurement callback.
+     *
+     * @see LocationManager.registerGnssMeasurementsCallback
+     */
+    @RequiresApi(Build.VERSION_CODES.N)
+    fun registerGnssMeasurementsCallback(vararg behaviors: ObservableBehavior): Observable<GnssMeasurementsResponse> =
+            Observable.create<GnssMeasurementsResponse> { emitter ->
+                object : GnssMeasurementsEvent.Callback() {
+                    override fun onGnssMeasurementsReceived(eventArgs: GnssMeasurementsEvent) {
+                        super.onGnssMeasurementsReceived(eventArgs)
+                        emitter.onNext(GnssMeasurementsResponse.GnssMeasurementsReceived(eventArgs))
+                    }
+
+                    override fun onStatusChanged(status: Int) {
+                        super.onStatusChanged(status)
+                        emitter.onNext(GnssMeasurementsResponse.StatusChanged(status))
+                    }
+                }.also {
+                    emitter.setCancellable { locationManager.unregisterGnssMeasurementsCallback(it) }
+
+                    if (!locationManager.registerGnssMeasurementsCallback(it)) {
+                        emitter.onError(ListenerNotRegisteredException())
+                    }
+                }
+            }.applyBehaviors(behaviors, BehaviorParams()).compose(this::applySchedulers)
+
+    /**
+     * Registers a GNSS Navigation Message callback.
+     *
+     * @see LocationManager.registerGnssNavigationMessageCallback
+     */
+    @RequiresApi(Build.VERSION_CODES.N)
+    fun registerGnssNavigationMessageCallback(vararg behaviors: ObservableBehavior): Observable<GnssNavigationResponse> =
+            Observable.create<GnssNavigationResponse> { emitter ->
+                object : GnssNavigationMessage.Callback() {
+                    override fun onGnssNavigationMessageReceived(event: GnssNavigationMessage) {
+                        super.onGnssNavigationMessageReceived(event)
+                        emitter.onNext(GnssNavigationResponse.GnssNavigationMessageReceived(event))
+                    }
+
+                    override fun onStatusChanged(status: Int) {
+                        super.onStatusChanged(status)
+                        emitter.onNext(GnssNavigationResponse.StatusChanged(status))
+                    }
+                }.also {
+                    emitter.setCancellable { locationManager.unregisterGnssNavigationMessageCallback(it) }
+
+                    if (!locationManager.registerGnssNavigationMessageCallback(it)) {
+                        emitter.onError(ListenerNotRegisteredException())
+                    }
+                }
+            }.applyBehaviors(behaviors, BehaviorParams()).compose(this::applySchedulers)
+
+    /**
+     * Retrieves information about the current status of the GPS engine.
+     *
+     * @see LocationManager.getGpsStatus
+     */
+    @JvmOverloads
+    @Suppress("DEPRECATION")
+    fun getGpsStatus(status: GpsStatus? = null, vararg behaviors: SingleBehavior) =
+            Single.fromCallable { locationManager.getGpsStatus(status) }
+                    .applyBehaviors(behaviors, BehaviorParams())
+                    .compose(this::applySchedulers)
 
     /**
      * Returns a list of the names of all known location providers.

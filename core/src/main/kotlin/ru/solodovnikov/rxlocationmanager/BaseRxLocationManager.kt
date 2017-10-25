@@ -2,8 +2,7 @@ package ru.solodovnikov.rxlocationmanager
 
 import android.content.Context
 import android.content.Intent
-import android.location.Location
-import android.location.LocationManager
+import android.location.*
 import android.os.Build
 import android.os.SystemClock
 
@@ -29,6 +28,23 @@ abstract class BaseRxLocationManager(context: Context) {
         } else {
             System.currentTimeMillis() - time < howOldCanBe.timeUnit.toMillis(howOldCanBe.time)
         }
+    }
+
+    sealed class GnssStatusResponse {
+        class GnssStarted : GnssStatusResponse()
+        class GnssStopped : GnssStatusResponse()
+        data class GnssSatelliteStatusChanged(val status: GnssStatus) : GnssStatusResponse()
+        data class GnssFirstFix(val ttffMillis: Int) : GnssStatusResponse()
+    }
+
+    sealed class GnssMeasurementsResponse {
+        data class GnssMeasurementsReceived(val eventArgs: GnssMeasurementsEvent) : GnssMeasurementsResponse()
+        data class StatusChanged(val status: Int) : GnssMeasurementsResponse()
+    }
+
+    sealed class GnssNavigationResponse {
+        data class GnssNavigationMessageReceived(val event: GnssNavigationMessage) : GnssNavigationResponse()
+        data class StatusChanged(val status: Int) : GnssNavigationResponse()
     }
 
     data class NmeaMessage(var nmea: String, var timestamp: Long)

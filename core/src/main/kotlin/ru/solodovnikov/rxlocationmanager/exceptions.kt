@@ -28,6 +28,11 @@ class LocationDisabledException : Throwable("Location is disabled on the device"
 class IgnorableException : Throwable()
 
 /**
+ * Throwed when listener is not registered
+ */
+class ListenerNotRegisteredException : Throwable()
+
+/**
  * Throws when null emitted
  */
 internal class NullEmittedException : Throwable()
