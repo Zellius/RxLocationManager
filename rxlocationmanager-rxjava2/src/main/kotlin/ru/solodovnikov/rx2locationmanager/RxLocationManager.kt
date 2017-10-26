@@ -106,7 +106,7 @@ class RxLocationManager internal constructor(context: Context,
     @JvmOverloads
     fun requestLocationUpdates(provider: String,
                                minTime: Long = 0L,
-                               minDistance: Float = 0F,
+                               minDistance: Float = 0.0F,
                                vararg behaviors: ObservableBehavior): Observable<Location> =
             Observable.create<Location> { emitter ->
                 if (locationManager.isProviderEnabled(provider)) {

@@ -367,6 +367,7 @@ class RxLocationManager2Test {
 
         defaultRxLocationManager.isProviderEnabled(networkProvider)
                 .test()
+                .await()
                 .assertNoErrors()
                 .assertComplete()
                 .assertValue(true)
@@ -386,6 +387,7 @@ class RxLocationManager2Test {
 
         defaultRxLocationManager.getProviders(c, enabledOnly)
                 .test()
+                .await()
                 .assertNoErrors()
                 .assertComplete()
                 .assertValue(providers)
@@ -403,6 +405,7 @@ class RxLocationManager2Test {
 
         defaultRxLocationManager.getBestProvider(c, enabledOnly)
                 .test()
+                .await()
                 .assertNoErrors()
                 .assertComplete()
                 .assertValue(networkProvider)
@@ -418,6 +421,7 @@ class RxLocationManager2Test {
 
         defaultRxLocationManager.getGpsStatus()
                 .test()
+                .await()
                 .assertNoErrors()
                 .assertComplete()
                 .assertValue(gpsStatus)
@@ -431,9 +435,24 @@ class RxLocationManager2Test {
 
         defaultRxLocationManager.getGpsStatus(gpsStatus)
                 .test()
+                .await()
                 .assertNoErrors()
                 .assertComplete()
                 .assertValue(gpsStatus)
+    }
+
+    @Test
+    fun test_RequestLocationUpdatesEnabled() {
+        setIsProviderEnabled(isEnabled = true)
+
+        val minTime = 0L
+        val minDistance = 0.0F
+
+
+
+        defaultRxLocationManager.requestLocationUpdates(networkProvider, minTime, minDistance)
+                .test()
+                .assertNoErrors()
     }
 
     /**

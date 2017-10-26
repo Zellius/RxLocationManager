@@ -179,7 +179,7 @@ class EnableLocationBehavior(private val resolver: Resolver) : Behavior {
 
         protected fun checkProvider(provider: String): Single<Boolean> =
                 rxLocationManager.getProvider(provider)
-                        .switchIfEmpty { Maybe.error<LocationProvider>(ProviderNotAvailableException(provider)) }
+                        .switchIfEmpty(Maybe.error<LocationProvider>(ProviderNotAvailableException(provider)))
                         .flatMapSingle { rxLocationManager.isProviderEnabled(it.name) }
 
         protected fun subscribeToActivityResultUpdate(f: (Instrumentation.ActivityResult) -> Unit): Disposable =
