@@ -262,3 +262,41 @@ class EnableLocationBehavior(private val resolver: Resolver) : Behavior {
                 }
     }
 }
+
+class ThrowProviderDisabledBehavior(private val rxLocationManager: RxLocationManager) : Behavior {
+    override fun <T> transform(upstream: Single<T>, params: BehaviorParams): Single<T> =
+            rxLocationManager.isProviderEnabled(params.provider!!).flatMap {
+                if (it) {
+                    upstream
+                } else {
+                    Single.error(ProviderDisabledException(params.provider))
+                }
+            }
+
+    override fun <T> transform(upstream: Maybe<T>, params: BehaviorParams): Maybe<T> =
+            rxLocationManager.isProviderEnabled(params.provider!!).flatMapMaybe {
+                if (it) {
+                    upstream
+                } else {
+                    Maybe.error(ProviderDisabledException(params.provider))
+                }
+            }
+
+    override fun <T> transform(upstream: Observable<T>, params: BehaviorParams): Observable<T> =
+            rxLocationManager.isProviderEnabled(params.provider!!).flatMapObservable {
+                if (it) {
+                    upstream
+                } else {
+                    Observable.error(ProviderDisabledException(params.provider))
+                }
+            }
+
+    override fun transform(upstream: Completable, params: BehaviorParams): Completable =
+            rxLocationManager.isProviderEnabled(params.provider!!).flatMapCompletable {
+                if (it) {
+                    upstream
+                } else {
+                    Completable.error(ProviderDisabledException(params.provider))
+                }
+            }
+}

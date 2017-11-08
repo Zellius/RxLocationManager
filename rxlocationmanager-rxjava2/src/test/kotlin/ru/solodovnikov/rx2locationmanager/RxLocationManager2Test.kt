@@ -3,6 +3,7 @@ package ru.solodovnikov.rx2locationmanager
 import android.content.Context
 import android.location.*
 import android.os.Build
+import android.os.Bundle
 import com.nhaarman.mockito_kotlin.*
 import io.reactivex.schedulers.Schedulers
 import org.junit.Before
@@ -44,7 +45,7 @@ class RxLocationManager2Test {
      * Test that getLastLocation works fine
      */
     @Test
-    fun testGetLastLocation_Success() {
+    fun getLastKnownLocation_success() {
         val expectedLocation = buildFakeLocation()
 
         whenever(locationManager.getLastKnownLocation(networkProvider)).thenReturn(expectedLocation)
@@ -61,7 +62,7 @@ class RxLocationManager2Test {
      * Test that getLastLocation will throw [ElderLocationException] if location is old
      */
     @Test
-    fun testGetLastLocation_Old() {
+    fun getLastKnownLocation_old() {
         whenever(locationManager.getLastKnownLocation(networkProvider))
                 .thenReturn(buildFakeLocation()
                         .apply { time = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1) })
@@ -76,7 +77,7 @@ class RxLocationManager2Test {
      * Test that getLastLocation will emit [Location] if it is not old
      */
     @Test
-    fun testGetLastLocation_NotOld() {
+    fun getLastKnownLocation_notOld() {
         val expectedLocation = buildFakeLocation()
 
         whenever(locationManager.getLastKnownLocation(networkProvider))
@@ -94,7 +95,7 @@ class RxLocationManager2Test {
      * Test that getLastLocation emit no value if [LocationManager] return null
      */
     @Test
-    fun testGetLastLocation_NoLocation() {
+    fun getLastKnownLocation_noLocation() {
         whenever(locationManager.getLastKnownLocation(networkProvider))
                 .thenReturn(null)
 
@@ -110,7 +111,7 @@ class RxLocationManager2Test {
      * Test that [LocationManager] will be unsubscribed after dispose
      */
     @Test
-    fun testRequestLocation_Unsubscribe() {
+    fun requestLocation_unsubscribe() {
         //set provider enabled
         setIsProviderEnabled(isEnabled = true)
 
@@ -127,7 +128,7 @@ class RxLocationManager2Test {
     }
 
     @Test
-    fun testRequestLocation_Success() {
+    fun requestLocation_success() {
         val expectedLocation = buildFakeLocation()
 
         //set provider enabled
@@ -150,14 +151,39 @@ class RxLocationManager2Test {
     }
 
     /**
-     * Test that request location throw [ProviderDisabledException] if provider disabled
+     * Test that request location wait until provider will be enabled
      */
     @Test
-    fun testRequestLocation_ProviderDisabled() {
+    fun requestLocation_providerDisabled() {
         //set provider disabled
         setIsProviderEnabled(isEnabled = false)
+        val fakeLocation = buildFakeLocation()
 
         defaultRxLocationManager.requestLocation(networkProvider)
+                .test()
+                .also { o ->
+                    o.assertNotTerminated()
+
+                    argumentCaptor<LocationListener>().apply {
+                        verify(locationManager).requestSingleUpdate(eq(networkProvider), capture(), isNull())
+                        firstValue.onLocationChanged(fakeLocation)
+                    }
+
+                    o.await(1, TimeUnit.SECONDS)
+                    o.assertNoErrors()
+                            .assertComplete()
+                            .assertValue(fakeLocation)
+                }
+    }
+
+    /**
+     * Test that ThrowProviderDisabledBehavior will throw [ProviderDisabledException] if provider disabled
+     */
+    @Test
+    fun requestLocation_providerDisabledWithBehavior() {
+        setIsProviderEnabled(isEnabled = false)
+
+        defaultRxLocationManager.requestLocation(networkProvider, behaviors = ThrowProviderDisabledBehavior(defaultRxLocationManager))
                 .test()
                 .await()
                 .assertError(ProviderDisabledException::class.java)
@@ -167,7 +193,7 @@ class RxLocationManager2Test {
      * Test that request location throw [TimeoutException]
      */
     @Test
-    fun testRequestLocation_TimeOutError() {
+    fun requestLocation_timeOutError() {
         //set provider enabled
         setIsProviderEnabled(isEnabled = true)
 
@@ -175,6 +201,57 @@ class RxLocationManager2Test {
                 .test()
                 .await()
                 .assertError(TimeoutException::class.java)
+    }
+
+    /**
+     * Test raw implementation
+     */
+    @Test
+    fun requestLocationRaw_success() {
+        val provider = networkProvider
+        val status = 0
+        val extras = mock<Bundle>()
+        val location = buildFakeLocation(provider)
+
+        doAnswer {
+            val args = it.arguments
+            val locationListener = args[1] as LocationListener
+            locationListener.onProviderDisabled(provider)
+            locationListener.onProviderEnabled(provider)
+            locationListener.onStatusChanged(provider, status, extras)
+
+            locationListener.onLocationChanged(location)
+            locationListener.onLocationChanged(location)
+            locationListener.onLocationChanged(location)
+            return@doAnswer null
+        }.whenever(locationManager).requestSingleUpdate(eq(provider), any(), isNull())
+
+        defaultRxLocationManager.requestLocationRaw(provider)
+                .test()
+                .await()
+                .assertNoErrors()
+                .assertComplete()
+                .assertValueCount(4)
+                .assertValueAt(0, {
+                    (it as? BaseRxLocationManager.LocationEvent.ProviderEnableStatusEvent)?.run {
+                        !enabled && this.provider == provider
+                    } ?: false
+                })
+                .assertValueAt(1, {
+                    (it as? BaseRxLocationManager.LocationEvent.ProviderEnableStatusEvent)?.run {
+                        enabled && this.provider == provider
+                    } ?: false
+                })
+                .assertValueAt(2, {
+                    (it as? BaseRxLocationManager.LocationEvent.StatusChangedEvent)?.run {
+                        this.provider == provider && this.status == status && this.extras == extras
+                    } ?: false
+                })
+                .assertValueAt(3, {
+                    (it as? BaseRxLocationManager.LocationEvent.LocationChangedEvent)?.run {
+                        this.location == location
+                    } ?: false
+                })
     }
 
     /**
@@ -442,17 +519,138 @@ class RxLocationManager2Test {
     }
 
     @Test
-    fun test_RequestLocationUpdatesEnabled() {
+    fun getAllProviders() {
+        val providers = listOf("provider")
+
+        whenever(locationManager.allProviders).thenReturn(providers)
+
+        defaultRxLocationManager.getAllProviders()
+                .test()
+                .await()
+                .assertNoErrors()
+                .assertComplete()
+                .assertValue(providers)
+    }
+
+    @Test
+    fun requestLocationUpdatesRaw_success() {
         setIsProviderEnabled(isEnabled = true)
 
-        val minTime = 0L
-        val minDistance = 0.0F
+        val provider = networkProvider
+        val time = 0L
+        val distance = 0.0F
+        val status = 0
+        val extras = mock<Bundle>()
+        val location = buildFakeLocation(provider)
 
+        doAnswer {
+            val args = it.arguments
+            val locationListener = args[3] as LocationListener
+            locationListener.onProviderDisabled(provider)
+            locationListener.onProviderEnabled(provider)
+            locationListener.onStatusChanged(provider, status, extras)
 
+            locationListener.onLocationChanged(location)
+            locationListener.onLocationChanged(location)
+            locationListener.onLocationChanged(location)
+            return@doAnswer null
+        }.whenever(locationManager).requestLocationUpdates(eq(provider), eq(time), eq(distance), any<LocationListener>())
 
-        defaultRxLocationManager.requestLocationUpdates(networkProvider, minTime, minDistance)
+        defaultRxLocationManager.requestLocationUpdatesRaw(provider, time, distance)
                 .test()
-                .assertNoErrors()
+                .also {
+                    it.await(10, TimeUnit.MILLISECONDS)
+                    it.assertNotTerminated()
+                            .assertValueCount(6)
+                            .assertValueAt(0, {
+                                (it as? BaseRxLocationManager.LocationEvent.ProviderEnableStatusEvent)?.run {
+                                    !enabled && this.provider == provider
+                                } ?: false
+                            })
+                            .assertValueAt(1, {
+                                (it as? BaseRxLocationManager.LocationEvent.ProviderEnableStatusEvent)?.run {
+                                    enabled && this.provider == provider
+                                } ?: false
+                            })
+                            .assertValueAt(2, {
+                                (it as? BaseRxLocationManager.LocationEvent.StatusChangedEvent)?.run {
+                                    this.provider == provider && this.status == status && this.extras == extras
+                                } ?: false
+                            })
+                            .assertValueAt(3, {
+                                (it as? BaseRxLocationManager.LocationEvent.LocationChangedEvent)?.run {
+                                    this.location == location
+                                } ?: false
+                            })
+                            .assertValueAt(4, {
+                                (it as? BaseRxLocationManager.LocationEvent.LocationChangedEvent)?.run {
+                                    this.location == location
+                                } ?: false
+                            })
+                            .assertValueAt(5, {
+                                (it as? BaseRxLocationManager.LocationEvent.LocationChangedEvent)?.run {
+                                    this.location == location
+                                } ?: false
+                            })
+                }
+    }
+
+    @Test
+    fun requestLocationUpdatesRaw_unsubscribe() {
+        //set provider enabled
+        setIsProviderEnabled(isEnabled = true)
+
+        val time = 0L
+        val distance = 0.0F
+
+        defaultRxLocationManager.requestLocationUpdatesRaw(networkProvider, time, distance)
+                .test()
+                .also { observerer ->
+                    argumentCaptor<LocationListener>().apply {
+                        verify(locationManager).requestLocationUpdates(eq(networkProvider), eq(time), eq(distance), capture())
+                        assertNotNull(firstValue)
+                        observerer.dispose()
+                        verify(locationManager, times(1)).removeUpdates(eq(firstValue))
+                    }
+                }
+    }
+
+    @Test
+    fun requestLocationUpdates_success() {
+        setIsProviderEnabled(isEnabled = true)
+
+        val provider = networkProvider
+        val time = 0L
+        val distance = 0.0F
+        val status = 0
+        val extras = mock<Bundle>()
+        val location0 = buildFakeLocation(provider)
+        val location1 = buildFakeLocation(provider)
+        val location2 = buildFakeLocation(provider)
+
+        doAnswer {
+            val args = it.arguments
+            val locationListener = args[3] as LocationListener
+            locationListener.onProviderDisabled(provider)
+            locationListener.onProviderEnabled(provider)
+            locationListener.onStatusChanged(provider, status, extras)
+
+            locationListener.onLocationChanged(location0)
+            locationListener.onLocationChanged(location1)
+            locationListener.onLocationChanged(location2)
+            return@doAnswer null
+        }.whenever(locationManager).requestLocationUpdates(eq(provider), eq(time), eq(distance), any<LocationListener>())
+
+        defaultRxLocationManager.requestLocationUpdates(networkProvider, time, distance)
+                .test()
+                .also {
+                    it.await(10, TimeUnit.MILLISECONDS)
+                    it.assertNotTerminated()
+                            .assertValueCount(3)
+                            .assertValueAt(0, location0)
+                            .assertValueAt(1, location1)
+                            .assertValueAt(2, location2)
+                }
     }
 
     /**

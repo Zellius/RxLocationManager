@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.location.*
 import android.os.Build
+import android.os.Bundle
 import android.os.SystemClock
 
 abstract class BaseRxLocationManager(context: Context) {
@@ -28,6 +29,12 @@ abstract class BaseRxLocationManager(context: Context) {
         } else {
             System.currentTimeMillis() - time < howOldCanBe.timeUnit.toMillis(howOldCanBe.time)
         }
+    }
+
+    sealed class LocationEvent {
+        data class LocationChangedEvent(val location: Location) : LocationEvent()
+        data class ProviderEnableStatusEvent(val provider: String, val enabled: Boolean) : LocationEvent()
+        data class StatusChangedEvent(val provider: String, val status: Int, val extras: Bundle?) : LocationEvent()
     }
 
     sealed class GnssStatusResponse {

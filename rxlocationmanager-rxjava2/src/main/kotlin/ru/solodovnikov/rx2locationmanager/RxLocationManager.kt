@@ -1,5 +1,6 @@
 package ru.solodovnikov.rx2locationmanager
 
+import android.annotation.SuppressLint
 import android.app.Instrumentation
 import android.content.Context
 import android.content.Intent
@@ -15,6 +16,7 @@ import java.util.concurrent.TimeoutException
 /**
  * Implementation of [BaseRxLocationManager] based on RxJava2
  */
+@SuppressLint("MissingPermission")
 class RxLocationManager internal constructor(context: Context,
                                              private val scheduler: Scheduler
 ) : BaseRxLocationManager(context) {
@@ -22,6 +24,7 @@ class RxLocationManager internal constructor(context: Context,
 
     private val permissionSubject by lazy { PublishSubject.create<Pair<Array<out String>, IntArray>>() }
     private val resultSubject by lazy { PublishSubject.create<Instrumentation.ActivityResult>() }
+
 
     /**
      * Get last location from specific provider
@@ -53,86 +56,89 @@ class RxLocationManager internal constructor(context: Context,
                     .compose(this::applySchedulers)
 
     /**
-     * Try to get current location by specific provider.
+     * Emit any [LocationListener] events. Observable will completed as soon as it emits any location.
      * Observable will emit [TimeoutException] if [timeOut] is not null and timeOut occurs.
-     * Observable will emit [ProviderDisabledException] if provider is disabled
      *
      * @param provider provider name
      * @param timeOut  request timeout
      * @param behaviors extra behaviors
-     * @return observable that emit current location
+     * @return [Observable] that emit location events
      * @see TimeoutException
-     * @see ProviderDisabledException
+     * @see ru.solodovnikov.rx2locationmanager.BaseRxLocationManager.LocationEvent
+     */
+    @JvmOverloads
+    fun requestLocationRaw(provider: String,
+                           timeOut: LocationTime? = null,
+                           vararg behaviors: ObservableBehavior): Observable<LocationEvent> =
+            Observable.create<LocationEvent> { emitter ->
+                SingleLocationListener(emitter).also {
+                    emitter.setCancellable { locationManager.removeUpdates(it) }
+
+                    locationManager.requestSingleUpdate(provider, it, null)
+                }
+            }.compose { if (timeOut != null) it.timeout(timeOut.time, timeOut.timeUnit) else it }
+                    .applyBehaviors(behaviors, BehaviorParams(provider))
+                    .compose(this::applySchedulers)
+
+    /**
+     * Try to get and emit current location.
+     * Single will emit [TimeoutException] if [timeOut] is not null and timeOut occurs.
+     *
+     * @param provider provider name
+     * @param timeOut  request timeout
+     * @param behaviors extra behaviors
+     * @return [Single] that emit location events
+     * @see TimeoutException
      */
     @JvmOverloads
     fun requestLocation(provider: String,
                         timeOut: LocationTime? = null,
                         vararg behaviors: SingleBehavior): Single<Location> =
-            Single.create(SingleOnSubscribe<Location> { emitter ->
-                if (locationManager.isProviderEnabled(provider)) {
-                    object : LocationListener {
-                        override fun onLocationChanged(location: Location) {
-                            emitter.onSuccess(location)
-                        }
-
-                        override fun onProviderDisabled(p: String?) {
-                            if (provider == p) {
-                                emitter.onError(ProviderDisabledException(provider))
-                            }
-                        }
-
-                        override fun onStatusChanged(p0: String?, p1: Int, p2: Bundle?) {}
-
-                        override fun onProviderEnabled(p: String?) {}
-                    }.also {
-                        emitter.setCancellable { locationManager.removeUpdates(it) }
-
-                        locationManager.requestSingleUpdate(provider, it, null)
-                    }
-                } else {
-                    emitter.onError(ProviderDisabledException(provider))
-                }
-            }).compose { if (timeOut != null) it.timeout(timeOut.time, timeOut.timeUnit) else it }
+            requestLocationRaw(provider, timeOut)
+                    .filter { it is LocationEvent.LocationChangedEvent }
+                    .firstOrError()
+                    .map { (it as LocationEvent.LocationChangedEvent).location }
                     .applyBehaviors(behaviors, BehaviorParams(provider))
-                    .compose(this::applySchedulers)
 
     /**
-     * Register for location updates using a Criteria
+     * Register for any location listener updates
      *
      * @param provider the name of the provider with which to register
      * @param minTime minimum time interval between location updates, in milliseconds
      * @param minDistance minimum distance between location updates, in meters
+     * @param behaviors extra behaviors
+     * @return [Observable] that emit any [LocationListener] events
+     */
+    @JvmOverloads
+    fun requestLocationUpdatesRaw(provider: String,
+                                  minTime: Long,
+                                  minDistance: Float = 0.0F,
+                                  vararg behaviors: ObservableBehavior): Observable<LocationEvent> =
+            Observable.create<LocationEvent> { emitter ->
+                DefaultLocationListener(emitter).also {
+                    emitter.setCancellable { locationManager.removeUpdates(it) }
+
+                    locationManager.requestLocationUpdates(provider, minTime, minDistance, it)
+                }
+            }.applyBehaviors(behaviors, BehaviorParams(provider)).compose(this::applySchedulers)
+
+    /**
+     * Register for location updates
+     *
+     * @param provider the name of the provider with which to register
+     * @param minTime minimum time interval between location updates, in milliseconds
+     * @param minDistance minimum distance between location updates, in meters
+     * @param behaviors extra behaviors
+     * @return [Observable] that emit only location update events
      */
     @JvmOverloads
     fun requestLocationUpdates(provider: String,
                                minTime: Long = 0L,
                                minDistance: Float = 0.0F,
                                vararg behaviors: ObservableBehavior): Observable<Location> =
-            Observable.create<Location> { emitter ->
-                if (locationManager.isProviderEnabled(provider)) {
-                    object : LocationListener {
-                        override fun onLocationChanged(location: Location) {
-                            emitter.onNext(location)
-                        }
-
-                        override fun onProviderDisabled(p: String) {
-                            if (provider == p) {
-                                emitter.onError(ProviderDisabledException(p))
-                            }
-                        }
-
-                        override fun onStatusChanged(provider: String, p1: Int, p2: Bundle?) {}
-
-                        override fun onProviderEnabled(provider: String) {}
-                    }.also {
-                        emitter.setCancellable { locationManager.removeUpdates(it) }
-
-                        locationManager.requestLocationUpdates(provider, minTime, minDistance, it)
-                    }
-                } else {
-                    emitter.onError(ProviderDisabledException(provider))
-                }
-            }.applyBehaviors(behaviors, BehaviorParams(provider)).compose(this::applySchedulers)
+            requestLocationUpdatesRaw(provider, minTime, minDistance, *behaviors)
+                    .filter { it is LocationEvent.LocationChangedEvent }
+                    .map { (it as LocationEvent.LocationChangedEvent).location }
 
     /**
      * Adds a GPS status listener
@@ -364,5 +370,30 @@ class RxLocationManager internal constructor(context: Context,
     private fun <T> applySchedulers(m: Maybe<T>) = m.subscribeOn(scheduler)
 
     private fun <T> applySchedulers(m: Observable<T>) = m.subscribeOn(scheduler)
+
+    private open class DefaultLocationListener(protected val emitter: Emitter<LocationEvent>) : LocationListener {
+        override fun onLocationChanged(location: Location) {
+            emitter.onNext(LocationEvent.LocationChangedEvent(location))
+        }
+
+        override fun onProviderDisabled(provider: String) {
+            emitter.onNext(LocationEvent.ProviderEnableStatusEvent(provider, false))
+        }
+
+        override fun onStatusChanged(provider: String, status: Int, extras: Bundle?) {
+            emitter.onNext(LocationEvent.StatusChangedEvent(provider, status, extras))
+        }
+
+        override fun onProviderEnabled(provider: String) {
+            emitter.onNext(LocationEvent.ProviderEnableStatusEvent(provider, true))
+        }
+    }
+
+    private class SingleLocationListener(emitter: Emitter<LocationEvent>) : DefaultLocationListener(emitter) {
+        override fun onLocationChanged(location: Location) {
+            super.onLocationChanged(location)
+            emitter.onComplete()
+        }
+    }
 }
 
