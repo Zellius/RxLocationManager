@@ -66,7 +66,7 @@ class RxLocationManager internal constructor(context: Context,
      * @param behaviors extra behaviors
      * @return [Observable] that emit location events
      * @see TimeoutException
-     * @see ru.solodovnikov.rx2locationmanager.BaseRxLocationManager.LocationEvent
+     * @see BaseRxLocationManager.LocationEvent
      */
     @JvmOverloads
     fun requestLocationRaw(provider: String,
@@ -146,7 +146,7 @@ class RxLocationManager internal constructor(context: Context,
                     .map { (it as LocationEvent.LocationChangedEvent).location }
 
     /**
-     * Adds a GPS status listener
+     * Adds a GPS status listener. Use [addGnssStatusListener] on API version >= N.
      *
      * @see LocationManager.addGpsStatusListener
      */

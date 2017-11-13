@@ -141,19 +141,20 @@ class RxLocationManager internal constructor(context: Context,
                     .map { (it as LocationEvent.LocationChangedEvent).location }
 
     /**
-     * Adds a GPS status listener
+     * Adds a GPS status listener. Use [addGnssStatusListener] on API version >= N.
      *
      * @see LocationManager.addGpsStatusListener
      */
     @Suppress("DEPRECATION")
     fun addGpsStatusListener(vararg behaviors: ObservableBehavior): Observable<Int> =
             Observable.create<Int> { emitter ->
-                GpsStatus.Listener { event -> emitter.onNext(event) }.also {
-                    emitter.setCancellable { locationManager.removeGpsStatusListener(it) }
-                    if (!locationManager.addGpsStatusListener(it)) {
-                        emitter.onError(ListenerNotRegisteredException())
-                    }
-                }
+                GpsStatus.Listener { event -> emitter.onNext(event) }
+                        .also {
+                            emitter.setCancellable { locationManager.removeGpsStatusListener(it) }
+                            if (!locationManager.addGpsStatusListener(it)) {
+                                emitter.onError(ListenerNotRegisteredException())
+                            }
+                        }
             }.applyBehaviors(behaviors, BehaviorParams()).compose(this::applySchedulers)
 
 

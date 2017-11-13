@@ -667,6 +667,56 @@ class RxLocationManagerTest {
     }
 
     /**
+     * Test success emiting Gps status
+     */
+    @Test
+    fun addGpsStatusListener_success() {
+        whenever(locationManager.addGpsStatusListener(any())).thenReturn(true)
+
+        defaultRxLocationManager.addGpsStatusListener()
+                .test()
+                .also { o ->
+                    o.assertNoTerminalEvent()
+
+                    val listener = argumentCaptor<GpsStatus.Listener>().run {
+                        verify(locationManager, times(1)).addGpsStatusListener(capture())
+                        firstValue
+                    }.apply {
+                        onGpsStatusChanged(GpsStatus.GPS_EVENT_STARTED)
+                        onGpsStatusChanged(GpsStatus.GPS_EVENT_STOPPED)
+                        onGpsStatusChanged(GpsStatus.GPS_EVENT_SATELLITE_STATUS)
+                    }
+
+                    o.awaitTerminalEvent(1, TimeUnit.MILLISECONDS)
+
+                    o.assertNoErrors()
+                            .assertNotCompleted()
+                            .assertValueCount(3)
+                            .assertValues(GpsStatus.GPS_EVENT_STARTED,
+                                    GpsStatus.GPS_EVENT_STOPPED,
+                                    GpsStatus.GPS_EVENT_SATELLITE_STATUS)
+                            .unsubscribe()
+
+                    verify(locationManager, times(1)).removeGpsStatusListener(eq(listener))
+                }
+    }
+
+
+    /**
+     * Test whenever listener was added
+     */
+    @Test
+    fun addGpsStatusListener_error() {
+        whenever(locationManager.addGpsStatusListener(any())).thenReturn(false)
+
+        defaultRxLocationManager.addGpsStatusListener()
+                .test()
+                .awaitTerminalEvent()
+                .assertError(ListenerNotRegisteredException::class.java)
+                .assertValueCount(0)
+    }
+
+    /**
      * Test [PermissionBehavior]
      */
     @Test
