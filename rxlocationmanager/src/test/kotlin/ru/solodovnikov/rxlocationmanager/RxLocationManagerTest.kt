@@ -687,8 +687,6 @@ class RxLocationManagerTest {
                         onGpsStatusChanged(GpsStatus.GPS_EVENT_SATELLITE_STATUS)
                     }
 
-                    o.awaitTerminalEvent(1, TimeUnit.MILLISECONDS)
-
                     o.assertNoErrors()
                             .assertNotCompleted()
                             .assertValueCount(3)
@@ -714,6 +712,55 @@ class RxLocationManagerTest {
                 .awaitTerminalEvent()
                 .assertError(ListenerNotRegisteredException::class.java)
                 .assertValueCount(0)
+    }
+
+    /**
+     * Test [RxLocationManager.addNmeaListener]
+     */
+    @Test
+    fun addNmeaListener_test() {
+        val message = "test_message"
+        val timestamp = System.currentTimeMillis()
+
+
+        whenever(locationManager.addNmeaListener(any<GpsStatus.NmeaListener>())).thenReturn(true)
+
+        defaultRxLocationManager.addNmeaListener()
+                .test()
+                .also { o ->
+                    o.assertNoTerminalEvent()
+
+                    val listener = argumentCaptor<GpsStatus.NmeaListener>().run {
+                        verify(locationManager, times(1)).addNmeaListener(capture())
+                        firstValue
+                    }.apply {
+                        onNmeaReceived(timestamp, message)
+                        onNmeaReceived(timestamp, message)
+                    }
+
+                    o.assertNoErrors()
+                            .assertNotCompleted()
+                            .assertValueCount(2)
+                            .apply {
+                                onNextEvents[0].also { assertTrue { it.timestamp == timestamp && it.nmea == message } }
+                                onNextEvents[1].also { assertTrue { it.timestamp == timestamp && it.nmea == message } }
+                            }
+                            .unsubscribe()
+
+                    verify(locationManager, times(1)).removeNmeaListener(listener)
+                }
+    }
+
+    /**
+     * Test whenever [RxLocationManager.addNmeaListener] throw exception if callback is not registered
+     */
+    @Test
+    fun addNmeaListener_error() {
+        defaultRxLocationManager.addNmeaListener()
+                .test()
+                .awaitTerminalEvent()
+                .assertError(ListenerNotRegisteredException::class.java)
+                .assertNoValues()
     }
 
     /**
