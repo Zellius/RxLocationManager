@@ -6,18 +6,25 @@ import android.os.Bundle
 
 interface ForResultCaller {
     /**
+     * Called to start activity for result
+     *
      * @see android.app.Activity.startActivityForResult
      * @see android.app.Fragment.startActivityForResult
      */
-    fun startActivityForResult(data: Intent, requestCode: Int)
+    fun startActivityForResult(data: Intent)
 
     /**
+     * Callsed to start intent sender for result
+     *
      * @see android.app.Activity.startIntentSenderForResult
      * @see android.app.Fragment.startIntentSenderForResult
      */
-    fun startIntentSenderForResult(intent: IntentSender, requestCode: Int,
-                                   fillInIntent: Intent?, flagsMask: Int, flagsValues: Int,
-                                   extraFlags: Int, options: Bundle?)
+    fun startIntentSenderForResult(intent: IntentSender,
+                                   fillInIntent: Intent?,
+                                   flagsMask: Int,
+                                   flagsValues: Int,
+                                   extraFlags: Int,
+                                   options: Bundle?)
 }
 
 interface PermissionCaller {

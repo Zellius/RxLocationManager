@@ -35,7 +35,7 @@ class LocationRequestBuilder(rxLocationManager: RxLocationManager
     fun addRequestLocation(provider: String,
                            timeOut: LocationTime? = null,
                            vararg behaviors: SingleBehavior): LocationRequestBuilder =
-            rxLocationManager.requestLocation(provider, timeOut, *arrayOf<SingleBehavior>(ThrowProviderDisabledBehavior(rxLocationManager)).plus(behaviors))
+            rxLocationManager.requestLocation(provider, timeOut, *arrayOf<SingleBehavior>(ThrowProviderDisabledBehavior()).plus(behaviors))
                     .toMaybe()
                     .toObservable()
                     .onErrorResumeNext(Function {

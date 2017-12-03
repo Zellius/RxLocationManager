@@ -98,7 +98,7 @@ public class MainActivity extends AppCompatActivity implements PermissionCaller 
     private void requestLastNetworkLocation() {
         final Maybe<Location> rx;
         if (checkPermissions) {
-            rx = rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, new PermissionBehavior(this, rxLocationManager, this));
+            rx = rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, new PermissionBehavior(this, this));
         } else {
             rx = rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER);
         }
@@ -109,7 +109,7 @@ public class MainActivity extends AppCompatActivity implements PermissionCaller 
     private void requestLastNetworkOneMinuteOldLocation() {
         final Maybe<Location> rx;
         if (checkPermissions) {
-            rx = rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(1, TimeUnit.MINUTES), new PermissionBehavior(this, rxLocationManager, this));
+            rx = rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(1, TimeUnit.MINUTES), new PermissionBehavior(this, this));
         } else {
             rx = rxLocationManager.getLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(1, TimeUnit.MINUTES));
         }
@@ -120,7 +120,7 @@ public class MainActivity extends AppCompatActivity implements PermissionCaller 
     private void requestLocation() {
         final Single<Location> rx;
         if (checkPermissions) {
-            rx = rxLocationManager.requestLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(15, TimeUnit.SECONDS), new PermissionBehavior(this, rxLocationManager, this));
+            rx = rxLocationManager.requestLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(15, TimeUnit.SECONDS), new PermissionBehavior(this, this));
         } else {
             rx = rxLocationManager.requestLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(15, TimeUnit.SECONDS));
         }
@@ -131,7 +131,7 @@ public class MainActivity extends AppCompatActivity implements PermissionCaller 
     private void requestBuild() {
         final Maybe<Location> rx;
         if (checkPermissions) {
-            final PermissionBehavior permissionBehavior = new PermissionBehavior(this, rxLocationManager, this);
+            final PermissionBehavior permissionBehavior = new PermissionBehavior(this, this);
 
             rx = locationRequestBuilder
                     .addLastLocation(LocationManager.NETWORK_PROVIDER, new LocationTime(30, TimeUnit.MINUTES), permissionBehavior)

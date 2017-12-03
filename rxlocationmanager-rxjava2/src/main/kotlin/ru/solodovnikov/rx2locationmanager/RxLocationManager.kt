@@ -64,7 +64,7 @@ class RxLocationManager internal constructor(context: Context,
      * @param behaviors extra behaviors
      * @return [Observable] that emit location events
      * @see TimeoutException
-     * @see ru.solodovnikov.rx2locationmanager.BaseRxLocationManager.LocationEvent
+     * @see BaseRxLocationManager.LocationEvent
      */
     @JvmOverloads
     fun requestLocationRaw(provider: String,
@@ -300,8 +300,9 @@ class RxLocationManager internal constructor(context: Context,
      *
      * @see LocationManager.getAllProviders
      */
-    fun getAllProviders() = Single.fromCallable { locationManager.allProviders }
-            .compose(this::applySchedulers)
+    fun getAllProviders(): Single<List<String>> =
+            Single.fromCallable { locationManager.allProviders }
+                    .compose(this::applySchedulers)
 
     /**
      * Returns a list of the names of location providers.
@@ -358,13 +359,13 @@ class RxLocationManager internal constructor(context: Context,
             = resultSubject.subscribe(onUpdate, {}, {})
 
     private fun <T> Single<T>.applyBehaviors(behaviors: Array<out SingleBehavior>, params: BehaviorParams) =
-            let { behaviors.fold(it, { acc, transformer -> transformer.transform(acc, params) }) }
+            let { behaviors.foldRight(it, { transformer, acc -> transformer.transform(acc, this@RxLocationManager, params) }) }
 
     private fun <T> Maybe<T>.applyBehaviors(behaviors: Array<out MaybeBehavior>, params: BehaviorParams) =
-            let { behaviors.fold(it, { acc, transformer -> transformer.transform(acc, params) }) }
+            let { behaviors.foldRight(it, { transformer, acc -> transformer.transform(acc, this@RxLocationManager, params) }) }
 
     private fun <T> Observable<T>.applyBehaviors(behaviors: Array<out ObservableBehavior>, params: BehaviorParams) =
-            let { behaviors.fold(it, { acc, transformer -> transformer.transform(acc, params) }) }
+            let { behaviors.foldRight(it, { transformer, acc -> transformer.transform(acc, this@RxLocationManager, params) }) }
 
     private fun <T> applySchedulers(s: Single<T>) = s.subscribeOn(scheduler)
 

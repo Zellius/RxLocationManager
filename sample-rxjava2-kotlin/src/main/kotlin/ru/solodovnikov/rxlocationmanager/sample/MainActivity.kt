@@ -19,7 +19,7 @@ class MainActivity : AppCompatActivity(), PermissionCaller, ForResultCaller {
     private val rxLocationManager: RxLocationManager by lazy { RxLocationManager(this) }
     private val locationRequestBuilder: LocationRequestBuilder by lazy { LocationRequestBuilder(rxLocationManager) }
 
-    private val enableLocationBehavior: Behavior by lazy { EnableLocationBehavior.create(this, REQUEST_CODE_LOCATION_SETTINGS, rxLocationManager, this) }
+    private val enableLocationBehavior: Behavior by lazy { EnableLocationBehavior.resolve(this, REQUEST_CODE_LOCATION_SETTINGS, rxLocationManager, this) }
     private val permissionBehavior: Behavior by lazy { PermissionBehavior(this, rxLocationManager, this) }
 
     private val coordinatorLayout by lazy { findViewById<CoordinatorLayout>(R.id.root) }

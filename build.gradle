@@ -1,6 +1,6 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 buildscript {
-    ext.kotlin_version = '1.1.60'
+    ext.kotlin_version = '1.2.0'
 
     repositories {
         google()
@@ -9,7 +9,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.0.0'
+        classpath 'com.android.tools.build:gradle:3.0.1'
         classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7.3'
         classpath 'org.kt3k.gradle.plugin:coveralls-gradle-plugin:2.8.1'
         classpath 'com.github.dcendents:android-maven-gradle-plugin:2.0'
@@ -68,7 +68,7 @@ project(':rxlocationmanager-rxjava2') {
     lib_description = 'Android library that helps to get location using standart LocationManager and RxJava2'
 
     dependencies {
-        api 'io.reactivex.rxjava2:rxjava:2.1.5'
+        api 'io.reactivex.rxjava2:rxjava:2.1.6'
         implementation 'io.reactivex.rxjava2:rxandroid:2.0.1'
     }
 
@@ -139,7 +139,7 @@ def prepareSample(Project p) {
         implementation 'com.google.android.gms:play-services-location:11.4.2'
 
         if (isKotlinSample) {
-            implementation "org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version"
+            implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
         }
 
         if (isRxJava2Sample) {

@@ -379,10 +379,10 @@ class RxLocationManager internal constructor(context: Context,
     private fun <T> applySchedulers(s: Observable<T>) = s.subscribeOn(scheduler)
 
     private fun <T> Single<T>.applyBehaviors(behaviors: Array<out SingleBehavior>, params: BehaviorParams) =
-            let { behaviors.fold(it, { acc, transformer -> transformer.transform(acc, params) }) }
+            let { behaviors.foldRight(it, { transformer, acc -> transformer.transform(acc, , params) }) }
 
     private fun <T> Observable<T>.applyBehaviors(behaviors: Array<out ObservableBehavior>, params: BehaviorParams) =
-            let { behaviors.fold(it, { acc, transformer -> transformer.transform(acc, params) }) }
+            let { behaviors.foldRight(it, { transformer, acc -> transformer.transform(acc, , params) }) }
 
     private open class DefaultLocationListener(protected val emitter: Emitter<LocationEvent>) : LocationListener {
         override fun onLocationChanged(location: Location) {
